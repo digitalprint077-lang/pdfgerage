@@ -29,7 +29,7 @@ export function ensureVisitorId(req, res) {
     res.cookie(VISITOR_COOKIE, id, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
+      sameSite: process.env.API_URL && process.env.FRONTEND_URL ? "none" : "lax",
       maxAge: 365 * 24 * 60 * 60 * 1000,
       path: "/",
     });

@@ -20,6 +20,9 @@ export function getGoogleClientSecret() {
 }
 
 export function getAppUrl() {
+  if (process.env.FRONTEND_URL) {
+    return process.env.FRONTEND_URL.replace(/\/$/, "");
+  }
   if (process.env.APP_URL) {
     return process.env.APP_URL.replace(/\/$/, "");
   }
@@ -30,8 +33,16 @@ export function getAppUrl() {
   return "http://localhost:5173";
 }
 
+/** Public URL of the Express API (Railway). Used for OAuth callback when frontend is on Vercel. */
+export function getApiUrl() {
+  if (process.env.API_URL) {
+    return process.env.API_URL.replace(/\/$/, "");
+  }
+  return getAppUrl();
+}
+
 export function getGoogleRedirectUri() {
-  return `${getAppUrl()}/api/auth/google/callback`;
+  return `${getApiUrl()}/api/auth/google/callback`;
 }
 
 function isValidEmail(email) {
@@ -55,10 +66,11 @@ function signToken(userId) {
 }
 
 function setAuthCookie(res, token) {
+  const crossSite = Boolean(process.env.API_URL && process.env.FRONTEND_URL);
   res.cookie(COOKIE_NAME, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
+    sameSite: crossSite ? "none" : "lax",
     maxAge: TOKEN_MAX_AGE_MS,
     path: "/",
   });
@@ -248,7 +260,7 @@ export function googleStartHandler(req, res) {
   const oauthCookie = {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
+    sameSite: process.env.API_URL && process.env.FRONTEND_URL ? "none" : "lax",
     maxAge: 10 * 60 * 1000,
     path: "/",
   };
@@ -271,14 +283,14 @@ export function googleStartHandler(req, res) {
 }
 
 export async function googleCallbackHandler(req, res) {
-  const appUrl = getAppUrl();
+  const frontendUrl = getAppUrl();
   const authPage = req.cookies?.[OAUTH_AUTH_PAGE_COOKIE] === "signup" ? "signup" : "login";
 
   const redirectAuthError = (code) => {
     res.clearCookie(OAUTH_STATE_COOKIE, { path: "/" });
     res.clearCookie(OAUTH_RETURN_COOKIE, { path: "/" });
     res.clearCookie(OAUTH_AUTH_PAGE_COOKIE, { path: "/" });
-    return res.redirect(`${appUrl}/${authPage}?error=${code}`);
+    return res.redirect(`${frontendUrl}/${authPage}?error=${code}`);
   };
 
   try {
@@ -303,7 +315,7 @@ export async function googleCallbackHandler(req, res) {
     const clientId = getGoogleClientId();
     const clientSecret = getGoogleClientSecret();
     if (!clientId || !clientSecret) {
-      return res.redirect(`${appUrl}/${authPage}?error=google_not_configured`);
+      return res.redirect(`${frontendUrl}/${authPage}?error=google_not_configured`);
     }
 
     const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
@@ -321,19 +333,19 @@ export async function googleCallbackHandler(req, res) {
     const tokens = await tokenRes.json();
     if (!tokenRes.ok || !tokens.access_token) {
       console.error("google token error:", tokens);
-      return res.redirect(`${appUrl}/${authPage}?error=google_token_failed`);
+      return res.redirect(`${frontendUrl}/${authPage}?error=google_token_failed`);
     }
 
     const profileRes = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
       headers: { Authorization: `Bearer ${tokens.access_token}` },
     });
     if (!profileRes.ok) {
-      return res.redirect(`${appUrl}/${authPage}?error=google_profile_failed`);
+      return res.redirect(`${frontendUrl}/${authPage}?error=google_profile_failed`);
     }
 
     const profile = await profileRes.json();
     if (!profile.email) {
-      return res.redirect(`${appUrl}/${authPage}?error=google_no_email`);
+      return res.redirect(`${frontendUrl}/${authPage}?error=google_no_email`);
     }
 
     const user = findOrCreateGoogleUser(
@@ -343,10 +355,10 @@ export async function googleCallbackHandler(req, res) {
     );
 
     setAuthCookie(res, signToken(user.id));
-    res.redirect(`${appUrl}${returnTo.startsWith("/") ? returnTo : "/"}`);
+    res.redirect(`${frontendUrl}${returnTo.startsWith("/") ? returnTo : "/"}`);
   } catch (err) {
     console.error("google callback error:", err);
-    res.redirect(`${appUrl}/${authPage}?error=google_failed`);
+    res.redirect(`${frontendUrl}/${authPage}?error=google_failed`);
   }
 }
 
