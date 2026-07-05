@@ -34,31 +34,47 @@ const upload = multer({
   limits: { fileSize: 100 * 1024 * 1024 },
 });
 
-function corsOrigins() {
+function corsOriginList() {
+  const list = [];
   if (process.env.CLIENT_ORIGIN) {
-    return process.env.CLIENT_ORIGIN.split(",").map((s) => s.trim()).filter(Boolean);
+    list.push(...process.env.CLIENT_ORIGIN.split(",").map((s) => s.trim()).filter(Boolean));
   }
   const appUrl = process.env.APP_URL?.replace(/\/$/, "");
   if (appUrl) {
-    const origins = [appUrl];
+    list.push(appUrl);
     try {
       const u = new URL(appUrl);
       if (u.hostname.startsWith("www.")) {
-        origins.push(`${u.protocol}//${u.hostname.slice(4)}`);
+        list.push(`${u.protocol}//${u.hostname.slice(4)}`);
       } else {
-        origins.push(`${u.protocol}//www.${u.hostname}`);
+        list.push(`${u.protocol}//www.${u.hostname}`);
       }
     } catch {
       /* ignore */
     }
-    return origins;
   }
-  return true;
+  return [...new Set(list)];
+}
+
+function isAllowedCorsOrigin(origin) {
+  if (!origin) return true;
+  const allowed = corsOriginList();
+  if (allowed.includes(origin)) return true;
+  try {
+    const host = new URL(origin).hostname;
+    // Vercel production + preview deploys for this project
+    if (/^pdfgerage(-[a-z0-9-]+)*\.vercel\.app$/i.test(host)) return true;
+  } catch {
+    /* ignore */
+  }
+  return false;
 }
 
 app.use(
   cors({
-    origin: corsOrigins(),
+    origin(origin, callback) {
+      callback(null, isAllowedCorsOrigin(origin));
+    },
     credentials: true,
   })
 );
