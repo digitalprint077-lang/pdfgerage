@@ -21,7 +21,7 @@ const labelClass = "mb-1.5 block text-sm font-medium text-[rgb(var(--foreground)
 
 export default function ContactPage() {
   const { user } = useAuth();
-  const [supportEmail, setSupportEmail] = useState("support@pdfgarage.app");
+  const [supportEmail, setSupportEmail] = useState("support@pdfgerage.app");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [account, setAccount] = useState("");
@@ -32,9 +32,9 @@ export default function ContactPage() {
   const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
-    document.title = "Contact Us — PDF Garage";
+    document.title = "Contact Us — PDF Gerage";
     return () => {
-      document.title = "PDF Garage";
+      document.title = "PDF Gerage";
     };
   }, []);
 
@@ -91,7 +91,7 @@ export default function ContactPage() {
           to="/"
           className="mb-8 inline-flex items-center gap-1 text-sm text-[rgb(var(--muted))] transition hover:text-brand"
         >
-          ← Back to PDF Garage
+          ← Back to PDF Gerage
         </Link>
 
         <header className="mb-8">
@@ -151,10 +151,10 @@ export default function ContactPage() {
               </div>
               <div>
                 <label htmlFor="contact-account" className={`${labelClass} flex items-center gap-1.5`}>
-                  Your PDF Garage account
+                  Your PDF Gerage account
                   <span
                     className="cursor-help text-gray-400"
-                    title="The email you use to sign in to PDF Garage, if you have an account"
+                    title="The email you use to sign in to PDF Gerage, if you have an account"
                   >
                     ⓘ
                   </span>

@@ -1,4 +1,4 @@
-# PDF Garage — production: Vite frontend + Express API on one port
+# PDF Gerage — production: Vite frontend + Express API on one port
 FROM node:20-bookworm-slim
 
 WORKDIR /app

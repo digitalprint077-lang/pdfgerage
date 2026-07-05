@@ -25,7 +25,7 @@ import { assertWithinDailyLimit, getUsageSnapshot, recordSuccessfulJob } from ".
 import { saveContactMessage } from "./db.js";
 import { buildStatusSnapshot } from "./statusMonitor.js";
 
-const SUPPORT_EMAIL = process.env.CONTACT_EMAIL || "support@pdfgarage.app";
+const SUPPORT_EMAIL = process.env.CONTACT_EMAIL || "support@pdfgerage.app";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -534,5 +534,5 @@ async function detectLibreOffice() {
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
-  console.log(`PDF Garage API running on http://localhost:${PORT}`);
+  console.log(`PDF Gerage API running on http://localhost:${PORT}`);
 });

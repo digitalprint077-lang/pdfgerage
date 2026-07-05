@@ -1,5 +1,5 @@
 /**
- * End-to-end smoke test for every PDF Garage tool (CloudConvert parity check).
+ * End-to-end smoke test for every PDF Gerage tool (CloudConvert parity check).
  * Usage: node scripts/test-all-tools.mjs [baseUrl]
  */
 import fs from "fs";
@@ -51,7 +51,7 @@ async function makePdf(name = "test.pdf") {
   const pdfDoc = await PDFDocument.create();
   const page = pdfDoc.addPage([612, 792]);
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-  page.drawText("PDF Garage tool test", { x: 72, y: 700, size: 18, font, color: rgb(0.1, 0.1, 0.1) });
+  page.drawText("PDF Gerage tool test", { x: 72, y: 700, size: 18, font, color: rgb(0.1, 0.1, 0.1) });
   const bytes = await pdfDoc.save();
   const p = path.join(tmpDir, name);
   fs.writeFileSync(p, bytes);
@@ -75,7 +75,7 @@ async function makeJpg(name = "test.jpg") {
 }
 
 async function makeTxt(name = "test.txt") {
-  const buf = Buffer.from("Hello PDF Garage\nLine two for translate test.\n", "utf8");
+  const buf = Buffer.from("Hello PDF Gerage\nLine two for translate test.\n", "utf8");
   fs.writeFileSync(path.join(tmpDir, name), buf);
   return { name, buffer: buf, mime: "text/plain" };
 }
@@ -102,7 +102,7 @@ async function makeXlsx(name = "test.xlsx") {
 async function makePptx(name = "test.pptx") {
   const pptx = new PptxGenJS();
   const slide = pptx.addSlide();
-  slide.addText("PDF Garage slide test", { x: 0.5, y: 0.5, w: 9, h: 1, fontSize: 24 });
+  slide.addText("PDF Gerage slide test", { x: 0.5, y: 0.5, w: 9, h: 1, fontSize: 24 });
   const p = path.join(tmpDir, name);
   await pptx.writeFile({ fileName: p });
   const buffer = fs.readFileSync(p);
@@ -169,7 +169,7 @@ async function testMulti(tool, files, from, to) {
 }
 
 async function main() {
-  console.log(`\n=== PDF Garage tool audit @ ${BASE} ===\n`);
+  console.log(`\n=== PDF Gerage tool audit @ ${BASE} ===\n`);
   const health = await checkHealth();
   const hasLO = health.libreOffice === true || health.libreOffice === "true";
   const hasTess = health.tesseract === true || health.tesseract === "true";

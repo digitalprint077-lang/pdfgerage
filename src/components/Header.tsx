@@ -20,7 +20,7 @@ function Logo({ onDark }: { onDark?: boolean }) {
         </svg>
       </div>
       <span className={`hero-logo-text text-lg font-bold tracking-tight ${onDark ? "text-white" : ""}`}>
-        PDF <span className="text-gradient">Garage</span>
+        PDF <span className="text-gradient">Gerage</span>
       </span>
     </Link>
   );

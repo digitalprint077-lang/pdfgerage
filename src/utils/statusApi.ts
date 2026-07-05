@@ -106,7 +106,7 @@ export function buildStatusFromHealth(health: HealthData, translate: TranslateSt
           id: "primary",
           name: "Primary region",
           operational: apiOk,
-          detail: "PDF Garage cloud infrastructure",
+          detail: "PDF Gerage cloud infrastructure",
         },
       ],
     },

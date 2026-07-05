@@ -12,9 +12,9 @@ export default function StaticPage({ pageId }: StaticPageProps) {
 
   useEffect(() => {
     if (!page) return;
-    document.title = `${page.title} — PDF Garage`;
+    document.title = `${page.title} — PDF Gerage`;
     return () => {
-      document.title = "PDF Garage";
+      document.title = "PDF Gerage";
     };
   }, [page]);
 
@@ -27,7 +27,7 @@ export default function StaticPage({ pageId }: StaticPageProps) {
           to="/"
           className="mb-6 inline-flex items-center gap-1 text-sm text-[rgb(var(--muted))] transition hover:text-brand"
         >
-          ← Back to PDF Garage
+          ← Back to PDF Gerage
         </Link>
         <header className="mb-10">
           <h1 className="text-3xl font-bold tracking-tight md:text-4xl">{page.title}</h1>

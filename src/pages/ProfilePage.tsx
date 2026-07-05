@@ -161,9 +161,9 @@ function ProfileDashboard() {
   const [passwordError, setPasswordError] = useState<string | null>(null);
 
   useEffect(() => {
-    document.title = `${t("profile")} — PDF Garage`;
+    document.title = `${t("profile")} — PDF Gerage`;
     return () => {
-      document.title = "PDF Garage";
+      document.title = "PDF Gerage";
     };
   }, [t]);
 

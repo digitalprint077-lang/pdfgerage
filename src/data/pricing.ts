@@ -228,6 +228,6 @@ export const PRICING_FAQ = [
   },
   {
     q: "Where are my files processed?",
-    a: "On PDF Garage secure cloud servers. Files are encrypted in transit, processed for your job, and deleted automatically afterward.",
+    a: "On PDF Gerage secure cloud servers. Files are encrypted in transit, processed for your job, and deleted automatically afterward.",
   },
 ];

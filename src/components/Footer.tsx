@@ -27,7 +27,7 @@ export default function Footer() {
                 </svg>
               </div>
               <span className="font-bold">
-                PDF <span className="text-gradient">Garage</span>
+                PDF <span className="text-gradient">Gerage</span>
               </span>
             </Link>
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-[rgb(var(--muted))]">{t("footerLocal")}</p>
@@ -61,7 +61,7 @@ export default function Footer() {
           </div>
         </div>
         <div className="mt-12 flex flex-col items-center justify-between gap-3 border-t border-[rgb(var(--border)/0.5)] pt-8 sm:flex-row">
-          <p className="text-xs text-[rgb(var(--muted))]">© {new Date().getFullYear()} PDF Garage</p>
+          <p className="text-xs text-[rgb(var(--muted))]">© {new Date().getFullYear()} PDF Gerage</p>
           <LegalLinks className="text-[rgb(var(--muted))]" />
         </div>
       </div>

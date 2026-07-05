@@ -30,7 +30,7 @@ export const SITE_PAGES: Record<string, SitePage> = {
 
     slug: "about",
 
-    title: "About PDF Garage",
+    title: "About PDF Gerage",
 
     subtitle: "Your online file conversion platform",
 
@@ -40,7 +40,7 @@ export const SITE_PAGES: Record<string, SitePage> = {
 
         paragraphs: [
 
-          "PDF Garage is a document conversion platform built for everyday file work — PDFs, Office files, images, OCR, and translation — in one simple workflow.",
+          "PDF Gerage is a document conversion platform built for everyday file work — PDFs, Office files, images, OCR, and translation — in one simple workflow.",
 
           "Upload a file, choose your output format, and download the result. Our cloud infrastructure handles the heavy lifting so you can convert from any device with a browser.",
 
@@ -76,7 +76,7 @@ export const SITE_PAGES: Record<string, SitePage> = {
 
           "We prioritize privacy and speed: encrypted transfers, automatic file deletion after processing, and industry-standard conversion engines (LibreOffice, Tesseract).",
 
-          "PDF Garage is designed for students, freelancers, and teams who need reliable conversions without complicated software installs.",
+          "PDF Gerage is designed for students, freelancers, and teams who need reliable conversions without complicated software installs.",
 
         ],
 
@@ -92,7 +92,7 @@ export const SITE_PAGES: Record<string, SitePage> = {
 
     title: "Security",
 
-    subtitle: "How PDF Garage handles your files",
+    subtitle: "How PDF Gerage handles your files",
 
     sections: [
 
@@ -100,7 +100,7 @@ export const SITE_PAGES: Record<string, SitePage> = {
 
         paragraphs: [
 
-          "PDF Garage processes files on secure cloud servers. Uploads are used only to complete the conversion you request and are not kept after the job finishes.",
+          "PDF Gerage processes files on secure cloud servers. Uploads are used only to complete the conversion you request and are not kept after the job finishes.",
 
         ],
 
@@ -130,7 +130,7 @@ export const SITE_PAGES: Record<string, SitePage> = {
 
         bullets: [
 
-          "Use PDF Garage over a trusted network connection",
+          "Use PDF Gerage over a trusted network connection",
 
           "Do not share your login session on public computers",
 
@@ -162,7 +162,7 @@ export const SITE_PAGES: Record<string, SitePage> = {
 
     title: "Blog",
 
-    subtitle: "Tips and updates from PDF Garage",
+    subtitle: "Tips and updates from PDF Gerage",
 
     sections: [
 
@@ -232,7 +232,7 @@ export const SITE_PAGES: Record<string, SitePage> = {
 
         paragraphs: [
 
-          "PDF Garage (“we”, “us”, or “the service”) is an online file conversion platform. This Privacy Policy describes how we collect, use, and protect information when you use PDF Garage.",
+          "PDF Gerage (“we”, “us”, or “the service”) is an online file conversion platform. This Privacy Policy describes how we collect, use, and protect information when you use PDF Gerage.",
 
           "When you upload a file for conversion, it is transmitted to our servers, processed to produce your requested output, and deleted when the job completes unless otherwise stated below.",
 
@@ -324,7 +324,7 @@ export const SITE_PAGES: Record<string, SitePage> = {
 
         paragraphs: [
 
-          "Some features rely on third-party providers. Translation and optional sign-in are the main exceptions to processing entirely on PDF Garage infrastructure.",
+          "Some features rely on third-party providers. Translation and optional sign-in are the main exceptions to processing entirely on PDF Gerage infrastructure.",
 
         ],
 
@@ -336,7 +336,7 @@ export const SITE_PAGES: Record<string, SitePage> = {
 
         paragraphs: [
 
-          "PDF Garage uses HTTP cookies to maintain your sign-in session when you use an account. We do not use cookies for cross-site advertising.",
+          "PDF Gerage uses HTTP cookies to maintain your sign-in session when you use an account. We do not use cookies for cross-site advertising.",
 
           "Your browser may store preferences such as dark mode or language selection.",
 
@@ -368,7 +368,7 @@ export const SITE_PAGES: Record<string, SitePage> = {
 
         bullets: [
 
-          "Use PDF Garage without an account for many conversion tools",
+          "Use PDF Gerage without an account for many conversion tools",
 
           "Request account deletion by contacting us",
 
@@ -384,7 +384,7 @@ export const SITE_PAGES: Record<string, SitePage> = {
 
         paragraphs: [
 
-          "PDF Garage is not directed at children under 13. We do not knowingly collect personal information from children. If you believe a child has provided us information, please contact us so we can remove it.",
+          "PDF Gerage is not directed at children under 13. We do not knowingly collect personal information from children. If you believe a child has provided us information, please contact us so we can remove it.",
 
         ],
 
@@ -396,7 +396,7 @@ export const SITE_PAGES: Record<string, SitePage> = {
 
         paragraphs: [
 
-          "We may update this Privacy Policy from time to time. The “Last updated” date at the top will reflect the latest version. Continued use of PDF Garage after changes means you accept the updated policy.",
+          "We may update this Privacy Policy from time to time. The “Last updated” date at the top will reflect the latest version. Continued use of PDF Gerage after changes means you accept the updated policy.",
 
         ],
 
@@ -408,7 +408,7 @@ export const SITE_PAGES: Record<string, SitePage> = {
 
         paragraphs: [
 
-          "Questions about this Privacy Policy? Visit the Contact page or email support@pdfgarage.app.",
+          "Questions about this Privacy Policy? Visit the Contact page or email support@pdfgerage.app.",
 
         ],
 
@@ -432,7 +432,7 @@ export const SITE_PAGES: Record<string, SitePage> = {
 
         paragraphs: [
 
-          "These Terms of Service (“Terms”) govern your use of PDF Garage. By accessing or using the service, you agree to these Terms. If you do not agree, do not use PDF Garage.",
+          "These Terms of Service (“Terms”) govern your use of PDF Gerage. By accessing or using the service, you agree to these Terms. If you do not agree, do not use PDF Gerage.",
 
         ],
 
@@ -444,7 +444,7 @@ export const SITE_PAGES: Record<string, SitePage> = {
 
         paragraphs: [
 
-          "PDF Garage provides file conversion, optimization, OCR, translation, and related tools through our website and cloud API. Feature availability depends on the formats you choose and the processing engines we operate.",
+          "PDF Gerage provides file conversion, optimization, OCR, translation, and related tools through our website and cloud API. Feature availability depends on the formats you choose and the processing engines we operate.",
 
         ],
 
@@ -468,7 +468,7 @@ export const SITE_PAGES: Record<string, SitePage> = {
 
         bullets: [
 
-          "Use PDF Garage only for files you have the legal right to access, convert, and distribute",
+          "Use PDF Gerage only for files you have the legal right to access, convert, and distribute",
 
           "Do not upload malware, illegal content, or material that infringes copyright or privacy rights",
 
@@ -506,7 +506,7 @@ export const SITE_PAGES: Record<string, SitePage> = {
 
         paragraphs: [
 
-          "You retain ownership of files and content you process with PDF Garage. You grant us only the limited rights needed to perform conversions you request through the service.",
+          "You retain ownership of files and content you process with PDF Gerage. You grant us only the limited rights needed to perform conversions you request through the service.",
 
           "You are solely responsible for reviewing output before relying on it for legal, medical, financial, or other critical purposes.",
 
@@ -532,7 +532,7 @@ export const SITE_PAGES: Record<string, SitePage> = {
 
         paragraphs: [
 
-          "PDF Garage is provided “as is” and “as available” without warranties of any kind, express or implied, including merchantability, fitness for a particular purpose, and non-infringement.",
+          "PDF Gerage is provided “as is” and “as available” without warranties of any kind, express or implied, including merchantability, fitness for a particular purpose, and non-infringement.",
 
           "Conversion quality varies by source file and format. We do not guarantee error-free, lossless, or perfectly formatted output for every file type.",
 
@@ -546,9 +546,9 @@ export const SITE_PAGES: Record<string, SitePage> = {
 
         paragraphs: [
 
-          "To the fullest extent permitted by law, PDF Garage and its contributors are not liable for indirect, incidental, special, consequential, or punitive damages, or for loss of data, profits, or business arising from your use of the service.",
+          "To the fullest extent permitted by law, PDF Gerage and its contributors are not liable for indirect, incidental, special, consequential, or punitive damages, or for loss of data, profits, or business arising from your use of the service.",
 
-          "Our total liability for any claim related to PDF Garage is limited to the amount you paid us in the twelve months before the claim, or zero if you use the service for free.",
+          "Our total liability for any claim related to PDF Gerage is limited to the amount you paid us in the twelve months before the claim, or zero if you use the service for free.",
 
         ],
 
@@ -560,7 +560,7 @@ export const SITE_PAGES: Record<string, SitePage> = {
 
         paragraphs: [
 
-          "You agree to indemnify and hold harmless PDF Garage from claims arising out of your misuse of the service, your content, or your violation of these Terms or applicable law.",
+          "You agree to indemnify and hold harmless PDF Gerage from claims arising out of your misuse of the service, your content, or your violation of these Terms or applicable law.",
 
         ],
 
@@ -572,7 +572,7 @@ export const SITE_PAGES: Record<string, SitePage> = {
 
         paragraphs: [
 
-          "We may modify or discontinue features at any time. You may stop using PDF Garage at any time. Sections that by nature should survive termination (including disclaimers, limitations of liability, and indemnification) will remain in effect.",
+          "We may modify or discontinue features at any time. You may stop using PDF Gerage at any time. Sections that by nature should survive termination (including disclaimers, limitations of liability, and indemnification) will remain in effect.",
 
         ],
 
@@ -596,7 +596,7 @@ export const SITE_PAGES: Record<string, SitePage> = {
 
         paragraphs: [
 
-          "These Terms are governed by the laws applicable where PDF Garage is operated, without regard to conflict-of-law rules. Disputes should first be raised through the Contact page so we can try to resolve them informally.",
+          "These Terms are governed by the laws applicable where PDF Gerage is operated, without regard to conflict-of-law rules. Disputes should first be raised through the Contact page so we can try to resolve them informally.",
 
         ],
 
@@ -608,7 +608,7 @@ export const SITE_PAGES: Record<string, SitePage> = {
 
         paragraphs: [
 
-          "Questions about these Terms? Visit the Contact page or email support@pdfgarage.app.",
+          "Questions about these Terms? Visit the Contact page or email support@pdfgerage.app.",
 
         ],
 

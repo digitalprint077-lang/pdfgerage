@@ -130,10 +130,10 @@ export type TranslationKey =
 type Dict = Record<TranslationKey, string>;
 
 const en: Dict = {
-  appTitle: "PDF Garage",
+  appTitle: "PDF Gerage",
   homeTitle: "Convert PDFs & Documents Online",
   homeSubtitle:
-    "Drop a file into PDF Garage and pick your output format. PDFs, Word, Excel, images, OCR, translation, and archives — free, secure, and right in your browser.",
+    "Drop a file into PDF Gerage and pick your output format. PDFs, Word, Excel, images, OCR, translation, and archives — free, secure, and right in your browser.",
   tools: "Tools",
   pricing: "Pricing",
   selectFileTitle: "Select your file here to get started",
@@ -212,9 +212,9 @@ const en: Dict = {
   profileSecurityInfo: "Security & privacy",
   profilePrivacyNote: "Your privacy",
   profilePrivacyDesc:
-    "PDF Garage processes your files on secure cloud infrastructure. Converted files are not kept after your job completes.",
+    "PDF Gerage processes your files on secure cloud infrastructure. Converted files are not kept after your job completes.",
   memberSince: "Member since",
-  backToHome: "Back to PDF Garage",
+  backToHome: "Back to PDF Gerage",
   dashOverview: "Overview",
   dashActivity: "Activity",
   dashSecurity: "Security",
@@ -265,7 +265,7 @@ const es: Dict = {
   ...en,
   homeTitle: "Convierte PDFs y documentos online",
   homeSubtitle:
-    "Sube un archivo a PDF Garage y elige el formato de salida. PDF, Word, Excel, imágenes, OCR, traducción y archivos — gratis, seguro y en tu navegador.",
+    "Sube un archivo a PDF Gerage y elige el formato de salida. PDF, Word, Excel, imágenes, OCR, traducción y archivos — gratis, seguro y en tu navegador.",
   tools: "Herramientas",
   selectFileTitle: "Selecciona tu archivo para comenzar",
   selectFileHint: "o suelta tu archivo aquí.",
@@ -296,7 +296,7 @@ const fr: Dict = {
   ...en,
   homeTitle: "Convertir PDF et documents en ligne",
   homeSubtitle:
-    "Déposez un fichier sur PDF Garage et choisissez le format de sortie. PDF, Word, Excel, images, OCR, traduction et archives — gratuit, sécurisé, dans le navigateur.",
+    "Déposez un fichier sur PDF Gerage et choisissez le format de sortie. PDF, Word, Excel, images, OCR, traduction et archives — gratuit, sécurisé, dans le navigateur.",
   tools: "Outils",
   selectFileTitle: "Sélectionnez votre fichier pour commencer",
   selectFileHint: "ou déposez votre fichier ici.",
@@ -321,7 +321,7 @@ const de: Dict = {
   ...en,
   homeTitle: "PDFs & Dokumente online konvertieren",
   homeSubtitle:
-    "Datei in PDF Garage hochladen und Zielformat wählen. PDF, Word, Excel, Bilder, OCR, Übersetzung und Archive — kostenlos, sicher, im Browser.",
+    "Datei in PDF Gerage hochladen und Zielformat wählen. PDF, Word, Excel, Bilder, OCR, Übersetzung und Archive — kostenlos, sicher, im Browser.",
   tools: "Werkzeuge",
   selectFileTitle: "Datei auswählen zum Starten",
   selectFileHint: "oder Datei hier ablegen.",
@@ -346,7 +346,7 @@ const zh: Dict = {
   ...en,
   homeTitle: "在线转换 PDF 与文档",
   homeSubtitle:
-    "将文件上传到 PDF Garage 并选择输出格式。支持 PDF、Word、Excel、图片、OCR、翻译和压缩包 — 免费、安全、无需安装。",
+    "将文件上传到 PDF Gerage 并选择输出格式。支持 PDF、Word、Excel、图片、OCR、翻译和压缩包 — 免费、安全、无需安装。",
   tools: "工具",
   selectFileTitle: "选择文件开始",
   selectFileHint: "或将文件拖放到此处。",
@@ -371,7 +371,7 @@ const ar: Dict = {
   ...en,
   homeTitle: "تحويل PDF والمستندات عبر الإنترنت",
   homeSubtitle:
-    "ارفع ملفاً إلى PDF Garage واختر صيغة الإخراج. PDF وWord وExcel وصور وOCR وترجمة وأرشيف — مجاناً وآمناً في متصفحك.",
+    "ارفع ملفاً إلى PDF Gerage واختر صيغة الإخراج. PDF وWord وExcel وصور وOCR وترجمة وأرشيف — مجاناً وآمناً في متصفحك.",
   tools: "الأدوات",
   selectFileTitle: "اختر ملفك للبدء",
   selectFileHint: "أو أسقط ملفك هنا.",
@@ -396,7 +396,7 @@ const hi: Dict = {
   ...en,
   homeTitle: "PDF और दस्तावेज़ ऑनलाइन कन्वर्ट करें",
   homeSubtitle:
-    "PDF Garage में फ़ाइल अपलोड करें और आउटपुट फ़ॉर्मैट चुनें। PDF, Word, Excel, छवियाँ, OCR, अनुवाद और संग्रह — मुफ़्त, सुरक्षित, ब्राउज़र में।",
+    "PDF Gerage में फ़ाइल अपलोड करें और आउटपुट फ़ॉर्मैट चुनें। PDF, Word, Excel, छवियाँ, OCR, अनुवाद और संग्रह — मुफ़्त, सुरक्षित, ब्राउज़र में।",
   tools: "टूल्स",
   selectFileTitle: "शुरू करने के लिए फ़ाइल चुनें",
   selectFileHint: "या फ़ाइल यहाँ छोड़ें।",
@@ -421,7 +421,7 @@ const ur: Dict = {
   ...en,
   homeTitle: "PDF اور دستاویزات آن لائن تبدیل کریں",
   homeSubtitle:
-    "PDF Garage میں فائل اپ لوڈ کریں اور آؤٹ پٹ فارمیٹ منتخب کریں۔ PDF، Word، Excel، تصاویر، OCR، ترجمہ اور آرکائیوز — مفت، محفوظ، براؤزر میں۔",
+    "PDF Gerage میں فائل اپ لوڈ کریں اور آؤٹ پٹ فارمیٹ منتخب کریں۔ PDF، Word، Excel، تصاویر، OCR، ترجمہ اور آرکائیوز — مفت، محفوظ، براؤزر میں۔",
   tools: "اوزار",
   selectFileTitle: "شروع کرنے کے لیے فائل منتخب کریں",
   selectFileHint: "یا فائل یہاں چھوڑیں۔",
@@ -446,7 +446,7 @@ const pt: Dict = {
   ...en,
   homeTitle: "Converta PDFs e documentos online",
   homeSubtitle:
-    "Envie um arquivo para o PDF Garage e escolha o formato de saída. PDF, Word, Excel, imagens, OCR, tradução e arquivos — grátis, seguro, no navegador.",
+    "Envie um arquivo para o PDF Gerage e escolha o formato de saída. PDF, Word, Excel, imagens, OCR, tradução e arquivos — grátis, seguro, no navegador.",
   tools: "Ferramentas",
   selectFileTitle: "Selecione seu arquivo para começar",
   selectFileHint: "ou solte seu arquivo aqui.",
@@ -471,7 +471,7 @@ const ja: Dict = {
   ...en,
   homeTitle: "PDFとドキュメントをオンライン変換",
   homeSubtitle:
-    "PDF Garageにファイルをアップロードし、出力形式を選びます。PDF、Word、Excel、画像、OCR、翻訳、アーカイブ — 無料・安全・ブラウザだけで。",
+    "PDF Gerageにファイルをアップロードし、出力形式を選びます。PDF、Word、Excel、画像、OCR、翻訳、アーカイブ — 無料・安全・ブラウザだけで。",
   tools: "ツール",
   selectFileTitle: "ファイルを選択して開始",
   selectFileHint: "またはここにドロップ。",

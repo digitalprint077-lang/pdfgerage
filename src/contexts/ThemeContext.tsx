@@ -14,7 +14,7 @@ interface ThemeContextValue {
   toggleDark: (event?: MouseEvent<HTMLElement>) => void;
 }
 
-const STORAGE_KEY = "pdfgarage-theme";
+const STORAGE_KEY = "pdfgerage-theme";
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 

@@ -118,7 +118,7 @@ export function buildStatusSnapshot({
           id: "primary",
           name: "Primary region",
           operational: regionsOk,
-          detail: "PDF Garage cloud infrastructure",
+          detail: "PDF Gerage cloud infrastructure",
         },
       ],
     },

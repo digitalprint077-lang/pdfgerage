@@ -227,7 +227,7 @@ export interface ToolDef {
 }
 
 export const TOOLS: ToolDef[] = [
-  { id: "home", label: "PDF Garage", group: "convert", operation: "convert", defaultFrom: "pdf", defaultTo: "any" },
+  { id: "home", label: "PDF Gerage", group: "convert", operation: "convert", defaultFrom: "pdf", defaultTo: "any" },
   { id: "document", label: "Document Converter", group: "convert", category: "document", operation: "convert", defaultFrom: "pdf", defaultTo: "docx" },
   { id: "image", label: "Image Converter", group: "convert", category: "image", operation: "convert", defaultFrom: "png", defaultTo: "jpg" },
   { id: "spreadsheet", label: "Spreadsheet Converter", group: "convert", category: "spreadsheet", operation: "convert", defaultFrom: "xlsx", defaultTo: "csv" },

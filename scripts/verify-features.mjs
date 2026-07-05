@@ -37,7 +37,7 @@ const { PDFDocument, StandardFonts, rgb } = await import("pdf-lib");
 const pdfDoc = await PDFDocument.create();
 const page = pdfDoc.addPage([612, 792]);
 const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-page.drawText("PDF Garage slide test", { x: 72, y: 700, size: 24, font, color: rgb(0.2, 0.2, 0.2) });
+page.drawText("PDF Gerage slide test", { x: 72, y: 700, size: 24, font, color: rgb(0.2, 0.2, 0.2) });
 const pdfBytes = await pdfDoc.save();
 const tmpDir = path.join(root, "scripts", ".tmp-test");
 fs.mkdirSync(tmpDir, { recursive: true });

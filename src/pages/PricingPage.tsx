@@ -244,9 +244,9 @@ export default function PricingPage() {
   const allRows = useMemo(() => [...CREDIT_ROWS, ...FEATURE_ROWS], []);
 
   useEffect(() => {
-    document.title = `${t("pricing")} — PDF Garage`;
+    document.title = `${t("pricing")} — PDF Gerage`;
     return () => {
-      document.title = "PDF Garage";
+      document.title = "PDF Gerage";
     };
   }, [t]);
 

@@ -120,9 +120,9 @@ export default function StatusPage() {
   const [conversionsOpen, setConversionsOpen] = useState(false);
 
   useEffect(() => {
-    document.title = "Status — PDF Garage";
+    document.title = "Status — PDF Gerage";
     return () => {
-      document.title = "PDF Garage";
+      document.title = "PDF Gerage";
     };
   }, []);
 
@@ -157,7 +157,7 @@ export default function StatusPage() {
           to="/"
           className="mb-10 inline-flex items-center gap-1 text-sm text-[rgb(var(--muted))] transition hover:text-brand"
         >
-          ← Back to PDF Garage
+          ← Back to PDF Gerage
         </Link>
 
         {loading ? (
@@ -311,7 +311,7 @@ export default function StatusPage() {
             </div>
 
             <p className="mt-6 text-center text-xs text-[rgb(var(--muted))]">
-              Status reflects the live PDF Garage service. Uptime history is updated as checks run.
+              Status reflects the live PDF Gerage service. Uptime history is updated as checks run.
             </p>
           </>
         ) : null}

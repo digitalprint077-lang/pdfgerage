@@ -10,7 +10,7 @@ fs.mkdirSync(tmpDir, { recursive: true });
 
 const pptx = new PptxGenJS();
 const slide = pptx.addSlide();
-slide.addText("PDF Garage presentation test", { x: 0.5, y: 0.5, w: 9, h: 1, fontSize: 28 });
+slide.addText("PDF Gerage presentation test", { x: 0.5, y: 0.5, w: 9, h: 1, fontSize: 28 });
 const buffer = await pptx.write({ outputType: "nodebuffer" });
 const pptxPath = path.join(tmpDir, "test.pptx");
 fs.writeFileSync(pptxPath, buffer);
