@@ -34,11 +34,31 @@ const upload = multer({
   limits: { fileSize: 100 * 1024 * 1024 },
 });
 
+function corsOrigins() {
+  if (process.env.CLIENT_ORIGIN) {
+    return process.env.CLIENT_ORIGIN.split(",").map((s) => s.trim()).filter(Boolean);
+  }
+  const appUrl = process.env.APP_URL?.replace(/\/$/, "");
+  if (appUrl) {
+    const origins = [appUrl];
+    try {
+      const u = new URL(appUrl);
+      if (u.hostname.startsWith("www.")) {
+        origins.push(`${u.protocol}//${u.hostname.slice(4)}`);
+      } else {
+        origins.push(`${u.protocol}//www.${u.hostname}`);
+      }
+    } catch {
+      /* ignore */
+    }
+    return origins;
+  }
+  return true;
+}
+
 app.use(
   cors({
-    origin: process.env.CLIENT_ORIGIN
-      ? process.env.CLIENT_ORIGIN.split(",").map((s) => s.trim())
-      : process.env.APP_URL || true,
+    origin: corsOrigins(),
     credentials: true,
   })
 );

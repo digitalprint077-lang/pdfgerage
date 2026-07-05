@@ -43,7 +43,16 @@ export interface StatusData {
 }
 
 async function fetchJson<T>(url: string): Promise<T | null> {
-  const res = await fetch(apiUrl(url));
+  let res: Response;
+  try {
+    res = await fetch(apiUrl(url), { credentials: "include" });
+  } catch {
+    throw new Error(
+      import.meta.env.VITE_API_URL
+        ? `Cannot reach API at ${import.meta.env.VITE_API_URL}. Check Railway is running and CORS allows ${window.location.origin}.`
+        : "Could not reach the API. Run npm run dev and refresh."
+    );
+  }
   const type = res.headers.get("content-type") || "";
   if (!res.ok || !type.includes("application/json")) return null;
   try {
