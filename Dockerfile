@@ -3,15 +3,17 @@ FROM node:20-bookworm-slim
 
 WORKDIR /app
 
-# Native deps for sharp, canvas, better-sqlite3
+# Native deps: sharp, canvas, LibreOffice, Tesseract, Python OCR
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 python3-pip \
     build-essential \
     libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev \
+    libreoffice-writer libreoffice-calc libreoffice-impress libreoffice-core \
+    tesseract-ocr \
     && rm -rf /var/lib/apt/lists/*
 
 COPY server/requirements.txt ./server/requirements.txt
-RUN pip3 install -r server/requirements.txt || true
+RUN pip3 install --break-system-packages -r server/requirements.txt
 
 COPY package.json package-lock.json ./
 RUN npm ci

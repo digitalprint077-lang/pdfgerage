@@ -550,7 +550,7 @@ async function detectLibreOffice() {
           "C:\\Program Files\\LibreOffice\\program\\soffice.exe",
           "C:\\Program Files (x86)\\LibreOffice\\program\\soffice.exe",
         ]
-      : ["soffice", "/usr/bin/soffice", "/Applications/LibreOffice.app/Contents/MacOS/soffice"];
+      : ["soffice", "/usr/bin/soffice", "/usr/bin/libreoffice", "/Applications/LibreOffice.app/Contents/MacOS/soffice"];
 
   for (const candidate of candidates) {
     try {
