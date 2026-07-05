@@ -550,16 +550,21 @@ async function detectLibreOffice() {
           "C:\\Program Files\\LibreOffice\\program\\soffice.exe",
           "C:\\Program Files (x86)\\LibreOffice\\program\\soffice.exe",
         ]
-      : ["soffice", "/usr/bin/soffice", "/usr/bin/libreoffice", "/Applications/LibreOffice.app/Contents/MacOS/soffice"];
+      : [
+          "/usr/bin/soffice",
+          "/usr/bin/libreoffice",
+          "/usr/lib/libreoffice/program/soffice",
+          "soffice",
+        ];
 
   for (const candidate of candidates) {
     try {
-      if (process.platform === "win32") {
+      if (candidate.includes("/") || candidate.includes("\\")) {
         await fs.access(candidate);
         return true;
       }
       const { execSync } = await import("child_process");
-      execSync(`which ${candidate}`, { stdio: "ignore" });
+      execSync(`command -v ${candidate}`, { stdio: "ignore" });
       return true;
     } catch {
       /* try next */
