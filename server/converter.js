@@ -74,6 +74,8 @@ const MIME = {
   xps: "application/vnd.ms-xpsdocument",
   txt: "text/plain",
   md: "text/markdown",
+  html: "text/html",
+  htm: "text/html",
   docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   doc: "application/msword",
   dot: "application/msword",
@@ -214,6 +216,10 @@ async function convertFromPdf(buffer, baseName, toFormat, tmpDir) {
 
   if (toFormat === "rtf") {
     return pdfToRtf(buffer, baseName);
+  }
+
+  if (toFormat === "html" || toFormat === "htm") {
+    return pdfToHtml(buffer, baseName, tmpDir);
   }
 
   if (PDF_TO_OFFICE.has(toFormat)) {
@@ -527,6 +533,78 @@ async function pdfToRtf(buffer, baseName) {
     buffer: Buffer.from(rtf, "utf-8"),
     filename: `${baseName}.rtf`,
     mimeType: MIME.rtf,
+  };
+}
+
+function escapeHtml(text) {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+async function pdfToHtml(buffer, baseName, tmpDir) {
+  try {
+    return await libreOfficeConvert(buffer, baseName, ".pdf", ".html", tmpDir);
+  } catch {
+    /* fall back to rendered pages */
+  }
+
+  const pages = await getPdfImagePageBuffers(buffer, "jpeg", tmpDir, "html-pages");
+  const pageMarkup = pages
+    .map(
+      (page, index) =>
+        `<img class="page" src="data:image/jpeg;base64,${page.toString("base64")}" alt="Page ${index + 1}" />`
+    )
+    .join("\n");
+
+  let extractedText = "";
+  try {
+    const text = (await extractTextFromPdfBuffer(buffer)).trim();
+    if (text) {
+      const body = escapeHtml(text)
+        .replace(/\n{3,}/g, "\n\n")
+        .split(/\n{2,}/)
+        .map((block) => `<p>${block.replace(/\n/g, "<br />")}</p>`)
+        .join("\n");
+      extractedText = `<section class="extracted-text">\n<h2>Extracted text</h2>\n${body}\n</section>`;
+    }
+  } catch {
+    /* optional text layer */
+  }
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>${escapeHtml(baseName)}</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body { margin: 0; font-family: system-ui, sans-serif; background: #525659; color: #111; }
+    .pdf-pages { padding: 16px 0 32px; }
+    .page { display: block; width: min(100%, 920px); margin: 0 auto 16px; background: #fff; box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25); }
+    .extracted-text { max-width: 920px; margin: 0 auto 32px; padding: 24px; background: #fff; box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15); }
+    .extracted-text h2 { margin: 0 0 16px; font-size: 1.1rem; }
+    .extracted-text p { margin: 0 0 12px; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="pdf-pages">
+${pageMarkup}
+    </section>
+${extractedText}
+  </main>
+</body>
+</html>`;
+
+  const ext = "html";
+  return {
+    buffer: Buffer.from(html, "utf-8"),
+    filename: `${baseName}.${ext}`,
+    mimeType: MIME[ext],
   };
 }
 
