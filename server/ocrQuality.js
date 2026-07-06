@@ -35,38 +35,6 @@ export function scoreOcrText(text, confidence = 0) {
   return score;
 }
 
-/** Rebuild text from Tesseract TSV, dropping low-confidence tokens. */
-export function textFromTsv(tsvRaw, minConf = 55) {
-  const lines = tsvRaw.split(/\r?\n/).slice(1);
-  const byLine = new Map();
-
-  for (const row of lines) {
-    const cols = row.split("\t");
-    if (cols.length < 12) continue;
-    const conf = Number.parseInt(cols[10], 10);
-    const word = (cols[11] || "").trim();
-    if (!word || word === "-") continue;
-    if (!Number.isFinite(conf) || conf < minConf) continue;
-
-    const lineKey = `${cols[1]}:${cols[4]}`;
-    if (!byLine.has(lineKey)) byLine.set(lineKey, []);
-    byLine.get(lineKey).push({ left: Number.parseInt(cols[6], 10) || 0, word });
-  }
-
-  const sortedLines = [...byLine.entries()]
-    .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }))
-    .map(([, words]) =>
-      words
-        .sort((a, b) => a.left - b.left)
-        .map((w) => w.word)
-        .join(" ")
-        .trim()
-    )
-    .filter(Boolean);
-
-  return sortedLines.join("\n");
-}
-
 export function getOcrLanguageAttempts(ocrLang) {
   const code = (ocrLang || "eng").toLowerCase();
   const attempts = new Set();
