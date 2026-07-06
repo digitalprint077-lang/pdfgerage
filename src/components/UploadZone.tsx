@@ -56,7 +56,7 @@ export default function UploadZone({
   overlapHero,
 }: UploadZoneProps) {
   const { t } = useI18n();
-  const { usage, refresh: refreshUsage, isBlocked, blockVariant, limit, applyUsageResponse, applyUsageFromResponse } =
+  const { usage, isBlocked, blockVariant, limit, applyUsageResponse, applyUsageFromResponse } =
     useUsageSnapshot();
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
@@ -234,6 +234,7 @@ export default function UploadZone({
         const data = await res.json().catch(() => ({ error: "Conversion failed" }));
         if (res.status === 429 && (data.code === "DAILY_LIMIT" || data.code === "NO_CREDITS")) {
           applyUsageResponse(data.usage, data.code);
+          applyUsageFromResponse(res, data.code);
         }
         throw new Error(data.error || "Conversion failed");
       }
@@ -254,7 +255,6 @@ export default function UploadZone({
         outputFormat: outFmt,
       });
       onStatusChange("done");
-      refreshUsage();
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") {
         onError(
@@ -339,6 +339,11 @@ export default function UploadZone({
             </button>
           </div>
         )}
+        {isBlocked ? (
+          <div className="mb-4">
+            <UsageLimitBanner variant={blockVariant} limit={limit} />
+          </div>
+        ) : null}
         <FileJobWorkspace
           operation={operation}
           files={selectedFiles}

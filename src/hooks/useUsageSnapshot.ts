@@ -1,18 +1,43 @@
 import { useCallback, useEffect, useState } from "react";
-import { fetchUsage, parseUsageHeaders, type UsageSnapshot } from "../utils/usageApi";
+import {
+  fetchUsage,
+  loadStoredUsage,
+  mergeUsage,
+  parseUsageHeaders,
+  saveStoredUsage,
+  type UsageSnapshot,
+} from "../utils/usageApi";
 
 export type UsageBlockVariant = "daily" | "no_credits";
 
+function persistUsage(snapshot: UsageSnapshot) {
+  saveStoredUsage(snapshot);
+  return snapshot;
+}
+
 export function useUsageSnapshot() {
-  const [usage, setUsage] = useState<UsageSnapshot | null>(null);
+  const [usage, setUsage] = useState<UsageSnapshot | null>(() => loadStoredUsage());
+
+  const commitUsage = useCallback((next: UsageSnapshot | null) => {
+    if (!next) {
+      setUsage(null);
+      return null;
+    }
+    const merged = mergeUsage(loadStoredUsage(), next);
+    if (merged) persistUsage(merged);
+    setUsage(merged);
+    return merged;
+  }, []);
 
   const refresh = useCallback(async () => {
     try {
-      setUsage(await fetchUsage());
+      const remote = await fetchUsage();
+      commitUsage(remote);
     } catch {
-      /* usage banner is optional */
+      const stored = loadStoredUsage();
+      if (stored) setUsage(stored);
     }
-  }, []);
+  }, [commitUsage]);
 
   useEffect(() => {
     refresh();
@@ -22,32 +47,48 @@ export function useUsageSnapshot() {
   const blockVariant: UsageBlockVariant =
     usage?.plan === "package" && (usage.creditBalance ?? 0) <= 0 ? "no_credits" : "daily";
 
-  const applyUsageResponse = useCallback((snapshot?: UsageSnapshot, code?: string) => {
-    if (snapshot) setUsage(snapshot);
-    if (code === "NO_CREDITS") {
-      setUsage((prev) =>
-        prev
-          ? { ...prev, remaining: 0, creditBalance: 0, plan: "package" }
-          : { plan: "package", limit: 0, used: 0, remaining: 0, maxFileSizeMb: 100, creditBalance: 0 }
-      );
-    }
-    if (code === "DAILY_LIMIT") {
-      setUsage((prev) =>
-        prev
-          ? { ...prev, remaining: 0, used: prev.limit }
-          : { plan: "free", limit: 15, used: 15, remaining: 0, maxFileSizeMb: 100, creditBalance: 0 }
-      );
-    }
-  }, []);
+  const applyUsageResponse = useCallback(
+    (snapshot?: UsageSnapshot, code?: string) => {
+      if (snapshot) {
+        commitUsage(snapshot);
+        return;
+      }
+      if (code === "NO_CREDITS") {
+        commitUsage({
+          plan: "package",
+          limit: usage?.limit ?? 0,
+          used: usage?.limit ?? 0,
+          remaining: 0,
+          maxFileSizeMb: 100,
+          creditBalance: 0,
+        });
+      }
+      if (code === "DAILY_LIMIT") {
+        const limit = usage?.limit ?? 15;
+        commitUsage({
+          plan: "free",
+          limit,
+          used: limit,
+          remaining: 0,
+          maxFileSizeMb: 100,
+          creditBalance: 0,
+        });
+      }
+    },
+    [commitUsage, usage?.limit]
+  );
 
-  const applyUsageFromResponse = useCallback((res: Response, code?: string) => {
-    const fromHeaders = parseUsageHeaders(res);
-    if (fromHeaders) {
-      setUsage(fromHeaders);
-      return;
-    }
-    applyUsageResponse(undefined, code);
-  }, [applyUsageResponse]);
+  const applyUsageFromResponse = useCallback(
+    (res: Response, code?: string) => {
+      const fromHeaders = parseUsageHeaders(res);
+      if (fromHeaders) {
+        commitUsage(fromHeaders);
+        return;
+      }
+      applyUsageResponse(undefined, code);
+    },
+    [applyUsageResponse, commitUsage]
+  );
 
   return {
     usage,

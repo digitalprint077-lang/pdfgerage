@@ -63,15 +63,16 @@ function incrementDailyCount(trackingId) {
 }
 
 export function getUserDailyUsage(userId) {
-  return (
+  const activityCount =
     db
       .prepare(
         `SELECT COUNT(*) AS c FROM user_activity
          WHERE user_id = ? AND status = 'success'
          AND date(created_at) = date('now')`
       )
-      .get(userId)?.c ?? 0
-  );
+      .get(userId)?.c ?? 0;
+  const counterCount = readDailyCount(`user:${userId}`);
+  return Math.max(activityCount, counterCount);
 }
 
 /** Anonymous usage: max of cookie visitor id and IP fingerprint (cookie bypass protection). */
@@ -168,7 +169,9 @@ export function recordSuccessfulJob(req, res) {
   if (req.user?.id) {
     if (getCreditBalance(req.user.id) > 0) {
       consumeCredits(req.user.id, 1);
+      return;
     }
+    incrementDailyCount(`user:${req.user.id}`);
     return;
   }
   recordVisitorUsage(req, res);

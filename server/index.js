@@ -44,6 +44,7 @@ const SUPPORT_EMAIL = process.env.CONTACT_EMAIL || "support@pdfgerage.app";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
+app.set("trust proxy", 1);
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 100 * 1024 * 1024 },

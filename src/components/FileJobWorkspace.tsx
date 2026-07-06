@@ -400,6 +400,11 @@ export default function FileJobWorkspace({
       {/* Gap + Done toolbar (CloudConvert-style) */}
       {isDone ? (
         <>
+          {usageBlocked ? (
+            <div className="mb-4">
+              <UsageLimitBanner variant={usageBlockVariant} limit={usageLimit} />
+            </div>
+          ) : null}
           <div className="min-h-[12rem] sm:min-h-[14rem]" aria-hidden />
           <section className="modern-card flex flex-wrap items-center justify-between gap-3 px-4 py-3 shadow-glow-sm sm:px-5">
             <div className="flex items-center gap-2 text-sm font-medium text-emerald-400">
