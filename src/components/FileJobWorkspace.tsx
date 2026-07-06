@@ -2,24 +2,32 @@ import { useRef } from "react";
 import type { ConversionState } from "../App";
 import type { Operation } from "../data/catalog";
 import { inferFormatFromFile } from "../data/catalog";
+import { ALL_INPUT_FORMAT_OPTIONS } from "../data/formats";
 import FormatIcon from "./FormatIcon";
+import CompactFormatPicker from "./CompactFormatPicker";
 import AddFilesMenu, { type CloudProvider } from "./AddFilesMenu";
 import ConversionResultBar, { type ConversionResultInfo } from "./ConversionResultBar";
 import { formatFileTypeLabel } from "../utils/outputFormats";
 import { useI18n } from "../i18n/I18nContext";
 import { OCR_LANG_OPTIONS, TRANSLATE_LANG_OPTIONS } from "../i18n/languages";
 import SelectDropdown from "./SelectDropdown";
+import { getOutputFormatOptions } from "../utils/outputFormats";
 
 const OUTPUT_FORMAT_OPTIONS = [
   { code: "txt", label: "TXT" },
-  { code: "docx", label: "DOCX" },
+  { code: "docx", label: "DOCX (scan + bordered fields)" },
+  { code: "pdf", label: "PDF (searchable scan)" },
 ];
 
 interface FileJobWorkspaceProps {
   operation: Operation;
   files: File[];
+  fromFormat: string;
+  toFormat: string;
+  onFromFormatChange: (fmt: string) => void;
+  onToFormatChange: (fmt: string) => void;
   outputFormat: string | null;
-  onOutputFormatChange: (fmt: string) => void;
+  onOutputFormatChange: (fmt: string | null) => void;
   onRemoveFile: (index: number) => void;
   onAddFiles: (files: File[]) => void;
   onAddUrl: () => void;
@@ -43,6 +51,10 @@ interface FileJobWorkspaceProps {
 export default function FileJobWorkspace({
   operation,
   files,
+  fromFormat,
+  toFormat,
+  onFromFormatChange,
+  onToFormatChange,
   outputFormat,
   onOutputFormatChange,
   onRemoveFile,
@@ -68,9 +80,11 @@ export default function FileJobWorkspace({
   const addInputRef = useRef<HTMLInputElement>(null);
 
   const primary = files[0];
-  const actualFrom = primary ? inferFormatFromFile(primary) : "pdf";
-  const displayOutput = conversionResult?.outputFormat || outputFormat;
-  const needsFormat = operation === "convert" && !outputFormat;
+  const inferredFrom = primary ? inferFormatFromFile(primary) : fromFormat;
+  const activeFrom = fromFormat || inferredFrom;
+  const activeTo = toFormat !== "any" ? toFormat : outputFormat;
+  const displayOutput = conversionResult?.outputFormat || activeTo;
+  const needsFormat = operation === "convert" && !activeTo;
   const isDone = status === "done" && conversionResult;
   const isConverting = status === "converting";
 
@@ -117,9 +131,27 @@ export default function FileJobWorkspace({
       {/* Source file rows */}
       {files.map((file, i) => {
         const fmt = inferFormatFromFile(file);
-        const showFormatFlow =
-          (operation === "convert" && i === 0 && displayOutput) ||
-          (isDone && i === 0 && displayOutput);
+        const showFormatPickers = operation === "convert" && i === 0 && !isDone;
+        const showFormatResult = operation === "convert" && i === 0 && isDone && displayOutput;
+        const toOptions = getOutputFormatOptions(activeFrom);
+
+        const handleFromChange = (next: string) => {
+          onFromFormatChange(next);
+          if (activeTo && activeTo === next) {
+            onOutputFormatChange(null);
+            onToFormatChange("any");
+          }
+        };
+
+        const handleToChange = (next: string) => {
+          let picked = next;
+          if (picked === activeFrom) {
+            const fallback = toOptions.find((o) => o.id !== picked);
+            if (fallback) picked = fallback.id;
+          }
+          onOutputFormatChange(picked);
+          onToFormatChange(picked);
+        };
 
         return (
           <div
@@ -154,16 +186,37 @@ export default function FileJobWorkspace({
                 </button>
               ) : null}
 
-              {showFormatFlow ? (
+              {showFormatPickers ? (
                 <div className="flex items-center gap-1.5">
-                  <span className="inline-flex rounded-md border border-[rgb(var(--border))] bg-[rgb(var(--card-hover)/0.5)] p-1">
-                    <FormatIcon format={actualFrom} small />
+                  <CompactFormatPicker
+                    value={activeFrom}
+                    options={ALL_INPUT_FORMAT_OPTIONS}
+                    onChange={handleFromChange}
+                    ariaLabel="Input format"
+                  />
+                  <svg className="h-3.5 w-3.5 shrink-0 text-[rgb(var(--muted))]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                  </svg>
+                  <CompactFormatPicker
+                    value={activeTo}
+                    options={toOptions}
+                    onChange={handleToChange}
+                    ariaLabel="Output format"
+                    placeholder="Pick"
+                  />
+                </div>
+              ) : null}
+
+              {showFormatResult ? (
+                <div className="flex items-center gap-1.5">
+                  <span className="inline-flex items-center gap-1 rounded-lg border border-[rgb(var(--border))] bg-[rgb(var(--card-hover)/0.5)] px-2 py-1.5">
+                    <FormatIcon format={activeFrom} small showLabel />
                   </span>
                   <svg className="h-3.5 w-3.5 text-[rgb(var(--muted))]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                   </svg>
-                  <span className="inline-flex rounded-md border border-[rgb(var(--border))] bg-[rgb(var(--card-hover)/0.5)] p-1">
-                    <FormatIcon format={displayOutput!} small />
+                  <span className="inline-flex items-center gap-1 rounded-lg border border-[rgb(var(--border))] bg-[rgb(var(--card-hover)/0.5)] px-2 py-1.5">
+                    <FormatIcon format={displayOutput!} small showLabel />
                   </span>
                 </div>
               ) : null}

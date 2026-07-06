@@ -16,7 +16,8 @@ interface ToolsMenuProps {
   };
 }
 
-const MENU_WIDTH = 720;
+const MENU_WIDTH = 960;
+const MENU_MAX_HEIGHT = 680;
 const VIEWPORT_PAD = 12;
 
 function toolPath(id: string) {
@@ -85,7 +86,7 @@ function ToolLink({
       to={toolPath(tool.id)}
       role="menuitem"
       onClick={onClose}
-      className={`block rounded-md px-1 py-1.5 text-sm transition hover:text-white ${
+      className={`block rounded-lg px-2 py-2 text-base transition hover:text-white ${
         active ? "font-medium text-brand" : "text-[rgb(var(--muted))] hover:bg-[rgb(var(--card-hover))]"
       }`}
     >
@@ -128,7 +129,7 @@ export default function ToolsMenu({ open, onClose, anchorRef, panelHoverProps }:
     if (!anchor) return;
     const rect = anchor.getBoundingClientRect();
     const spaceBelow = window.innerHeight - rect.bottom - VIEWPORT_PAD;
-    const maxHeight = Math.min(spaceBelow, 560);
+    const maxHeight = Math.min(spaceBelow, MENU_MAX_HEIGHT);
     const base = computeDropdownPosition({
       anchor: rect,
       panelHeight: maxHeight,
@@ -177,7 +178,7 @@ export default function ToolsMenu({ open, onClose, anchorRef, panelHoverProps }:
 
   const panelClass = "border-[rgb(var(--border))] bg-[rgb(var(--card))] text-[rgb(var(--foreground))]";
   const sectionHeaderBorder = "border-[rgb(var(--border))]";
-  const iconWrap = "flex h-8 w-8 items-center justify-center rounded-full bg-[rgb(var(--card-hover))] text-[rgb(var(--muted))]";
+  const iconWrap = "flex h-10 w-10 items-center justify-center rounded-full bg-[rgb(var(--card-hover))] text-[rgb(var(--muted))]";
 
   return createPortal(
     <div
@@ -193,18 +194,18 @@ export default function ToolsMenu({ open, onClose, anchorRef, panelHoverProps }:
         width: pos.width,
         transformOrigin: pos.transformOrigin,
       }}
-      className={`dropdown-popover fixed z-[200] overflow-y-auto overscroll-contain rounded-2xl border p-5 shadow-2xl picker-scroll ${panelClass}`}
+      className={`dropdown-popover fixed z-[200] overflow-y-auto overscroll-contain rounded-2xl border p-6 shadow-2xl picker-scroll md:p-7 ${panelClass}`}
     >
       {/* Row 1: Convert (2 cols) + Optimize */}
-      <div className="grid gap-6 md:grid-cols-3">
+      <div className="grid gap-8 md:grid-cols-3">
         <div className="md:col-span-2">
-          <div className={`mb-3 flex items-center gap-2.5 border-b pb-3 ${sectionHeaderBorder}`}>
+          <div className={`mb-4 flex items-center gap-3 border-b pb-4 ${sectionHeaderBorder}`}>
             <span className={iconWrap}>
-              <IconConvert className="h-4 w-4" />
+              <IconConvert className="h-5 w-5" />
             </span>
-            <h3 className="text-sm font-semibold">{t("toolGroups.convert")}</h3>
+            <h3 className="text-base font-semibold">{t("toolGroups.convert")}</h3>
           </div>
-          <div className="grid grid-cols-2 gap-x-8 gap-y-0">
+          <div className="grid grid-cols-2 gap-x-10 gap-y-0">
             <div>
               {convertCol1.map((tool) => (
                 <ToolLink key={tool.id} tool={tool} active={isActive(tool.id)} onClose={onClose} />
@@ -219,11 +220,11 @@ export default function ToolsMenu({ open, onClose, anchorRef, panelHoverProps }:
         </div>
 
         <div>
-          <div className={`mb-3 flex items-center gap-2.5 border-b pb-3 ${sectionHeaderBorder}`}>
+          <div className={`mb-4 flex items-center gap-3 border-b pb-4 ${sectionHeaderBorder}`}>
             <span className={iconWrap}>
-              <IconOptimize className="h-4 w-4" />
+              <IconOptimize className="h-5 w-5" />
             </span>
-            <h3 className="text-sm font-semibold">{t("toolGroups.optimize")}</h3>
+            <h3 className="text-base font-semibold">{t("toolGroups.optimize")}</h3>
           </div>
           {optimizeTools.map((tool) => (
             <ToolLink key={tool.id} tool={tool} active={isActive(tool.id)} onClose={onClose} />
@@ -231,14 +232,14 @@ export default function ToolsMenu({ open, onClose, anchorRef, panelHoverProps }:
         </div>
       </div>
 
-      {/* Row 2: Merge + Translate + Archives */}
-      <div className={`mt-6 grid gap-6 border-t pt-6 md:grid-cols-3 ${sectionHeaderBorder}`}>
+      {/* Row 2: Merge + Translate + AI + Archives */}
+      <div className={`mt-8 grid gap-8 border-t pt-8 md:grid-cols-4 ${sectionHeaderBorder}`}>
         <div>
-          <div className={`mb-3 flex items-center gap-2.5 border-b pb-3 ${sectionHeaderBorder}`}>
+          <div className={`mb-4 flex items-center gap-3 border-b pb-4 ${sectionHeaderBorder}`}>
             <span className={iconWrap}>
-              <IconMerge className="h-4 w-4" />
+              <IconMerge className="h-5 w-5" />
             </span>
-            <h3 className="text-sm font-semibold">{t("toolGroups.merge")}</h3>
+            <h3 className="text-base font-semibold">{t("toolGroups.merge")}</h3>
           </div>
           {mergeTools.map((tool) => (
             <ToolLink key={tool.id} tool={tool} active={isActive(tool.id)} onClose={onClose} />
@@ -246,11 +247,11 @@ export default function ToolsMenu({ open, onClose, anchorRef, panelHoverProps }:
         </div>
 
         <div>
-          <div className={`mb-3 flex items-center gap-2.5 border-b pb-3 ${sectionHeaderBorder}`}>
+          <div className={`mb-4 flex items-center gap-3 border-b pb-4 ${sectionHeaderBorder}`}>
             <span className={iconWrap}>
-              <IconTranslate className="h-4 w-4" />
+              <IconTranslate className="h-5 w-5" />
             </span>
-            <h3 className="text-sm font-semibold">{t("toolGroups.translate")}</h3>
+            <h3 className="text-base font-semibold">{t("toolGroups.translate")}</h3>
           </div>
           {translateTools.map((tool) => (
             <ToolLink key={tool.id} tool={tool} active={isActive(tool.id)} onClose={onClose} />
@@ -258,11 +259,11 @@ export default function ToolsMenu({ open, onClose, anchorRef, panelHoverProps }:
         </div>
 
         <div>
-          <div className={`mb-3 flex items-center gap-2.5 border-b pb-3 ${sectionHeaderBorder}`}>
+          <div className={`mb-4 flex items-center gap-3 border-b pb-4 ${sectionHeaderBorder}`}>
             <span className={iconWrap}>
-              <IconAi className="h-4 w-4" />
+              <IconAi className="h-5 w-5" />
             </span>
-            <h3 className="text-sm font-semibold">{t("toolGroups.ai")}</h3>
+            <h3 className="text-base font-semibold">{t("toolGroups.ai")}</h3>
           </div>
           {aiTools.map((tool) => (
             <ToolLink key={tool.id} tool={tool} active={isActive(tool.id)} onClose={onClose} />
@@ -270,11 +271,11 @@ export default function ToolsMenu({ open, onClose, anchorRef, panelHoverProps }:
         </div>
 
         <div>
-          <div className={`mb-3 flex items-center gap-2.5 border-b pb-3 ${sectionHeaderBorder}`}>
+          <div className={`mb-4 flex items-center gap-3 border-b pb-4 ${sectionHeaderBorder}`}>
             <span className={iconWrap}>
-              <IconArchive className="h-4 w-4" />
+              <IconArchive className="h-5 w-5" />
             </span>
-            <h3 className="text-sm font-semibold">{t("toolGroups.archives")}</h3>
+            <h3 className="text-base font-semibold">{t("toolGroups.archives")}</h3>
           </div>
           {archiveTools.map((tool) => (
             <ToolLink key={tool.id} tool={tool} active={isActive(tool.id)} onClose={onClose} />

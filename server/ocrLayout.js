@@ -88,6 +88,8 @@ export function structuredTextFromTsv(tsvRaw, minConf = 55, pxPerChar = 11) {
   return lines.join("\n");
 }
 
+export { parseTsvWords };
+
 /** Build layout lines from tesseract.js recognize() output. */
 export function structuredTextFromTesseractData(data, pxPerChar = 11) {
   const lines = data?.lines || [];

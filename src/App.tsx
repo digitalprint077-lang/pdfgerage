@@ -174,6 +174,7 @@ export default function App({ tool }: AppProps) {
                 onStatusChange={setStatus}
                 onError={setError}
                 onToFormatChange={handleToFormatChange}
+                onFromFormatChange={handleFromFormatChange}
                 overlapHero
               />
               <CategoryBrowser
@@ -217,6 +218,7 @@ export default function App({ tool }: AppProps) {
               onStatusChange={setStatus}
               onError={setError}
               onToFormatChange={handleToFormatChange}
+              onFromFormatChange={handleFromFormatChange}
             />
           </main>
           <Footer />

@@ -18,7 +18,8 @@ import { apiUrl } from "../utils/api";
 
 const OUTPUT_FORMAT_OPTIONS = [
   { code: "txt", label: "TXT" },
-  { code: "docx", label: "DOCX" },
+  { code: "docx", label: "DOCX (scan + bordered fields)" },
+  { code: "pdf", label: "PDF (searchable scan)" },
 ];
 
 interface UploadZoneProps {
@@ -32,6 +33,7 @@ interface UploadZoneProps {
   onStatusChange: (s: ConversionState) => void;
   onError: (e: string | null) => void;
   onToFormatChange?: (fmt: string) => void;
+  onFromFormatChange?: (fmt: string) => void;
   overlapHero?: boolean;
 }
 
@@ -48,13 +50,14 @@ export default function UploadZone({
   onStatusChange,
   onError,
   onToFormatChange,
+  onFromFormatChange,
   overlapHero,
 }: UploadZoneProps) {
   const { t } = useI18n();
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
   const [outputFormat, setOutputFormat] = useState<string | null>(
-    toFormat !== "any" ? toFormat : operation === "ocr" || operation === "translate" ? "txt" : null
+    toFormat !== "any" ? toFormat : operation === "ocr" ? "docx" : operation === "translate" ? "txt" : null
   );
   const [urlInput, setUrlInput] = useState("");
   const [showUrl, setShowUrl] = useState(false);
@@ -76,7 +79,7 @@ export default function UploadZone({
   const [previewOpen, setPreviewOpen] = useState(false);
   const effectiveTo =
     operation === "ocr" || operation === "translate"
-      ? outputFormat || "txt"
+      ? outputFormat || (operation === "ocr" ? "docx" : "txt")
       : toFormat === "any"
         ? outputFormat
         : toFormat;
@@ -85,16 +88,19 @@ export default function UploadZone({
   useEffect(() => {
     if (toFormat !== "any") {
       setOutputFormat(toFormat);
-    } else if (operation === "ocr" || operation === "translate") {
+    } else if (operation === "ocr") {
+      setOutputFormat("docx");
+    } else if (operation === "translate") {
       setOutputFormat("txt");
     } else if (selectedFiles.length === 0) {
       setOutputFormat(null);
     }
   }, [toFormat, operation, selectedFiles.length]);
 
-  const handleOutputChange = (fmt: string) => {
+  const handleOutputChange = (fmt: string | null) => {
     setOutputFormat(fmt);
-    onToFormatChange?.(fmt);
+    if (fmt) onToFormatChange?.(fmt);
+    else onToFormatChange?.("any");
   };
 
   const accept = getAcceptTypes(fromFormat, effectiveTo || "docx", operation);
@@ -326,6 +332,10 @@ export default function UploadZone({
         <FileJobWorkspace
           operation={operation}
           files={selectedFiles}
+          fromFormat={fromFormat}
+          toFormat={toFormat}
+          onFromFormatChange={(f) => onFromFormatChange?.(f)}
+          onToFormatChange={(f) => onToFormatChange?.(f)}
           outputFormat={outputFormat}
           onOutputFormatChange={handleOutputChange}
           onRemoveFile={(i) => {
@@ -464,7 +474,7 @@ export default function UploadZone({
                 </label>
               </div>
               <p className="max-w-lg text-xs text-gray-500 dark:text-gray-400">
-                DOCX output preserves form layout (columns &amp; spacing). For permits use <strong>English</strong>. Watermarked scans may take 1–3 minutes.
+                DOCX embeds the original scan plus bordered field tables. PDF keeps the scan with selectable text. For English permits use <strong>English</strong>. Watermarked scans may take 1–3 minutes.
               </p>
             </div>
           )}

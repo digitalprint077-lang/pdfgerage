@@ -476,7 +476,7 @@ async function processSingleFile(file, ctx) {
     operation === "convert" &&
     isOcrInputFormat(fromFormat || fileFormat(file)) &&
     (fromFormat || fileFormat(file)) !== "pdf" &&
-    ["txt", "docx"].includes(toFormat)
+    ["txt", "docx", "pdf"].includes(toFormat)
   ) {
     loggedOperation = "ocr";
     result = await runOcr({

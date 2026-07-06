@@ -144,7 +144,7 @@ export async function convertFile({ buffer, originalName, fromFormat, toFormat, 
     return convertSvgToRaster(buffer, baseName, to);
   }
 
-  if (IMAGE_FORMATS.has(from) && (to === "txt" || to === "md" || to === "docx")) {
+  if (IMAGE_FORMATS.has(from) && (to === "txt" || to === "md" || to === "docx" || to === "pdf")) {
     throw new Error(
       "Cannot extract text from images with the standard converter. Use Tools → Image OCR instead."
     );

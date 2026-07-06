@@ -300,7 +300,145 @@
     }
   }
 
+  /* Rotating orbit behind format picker cards */
+  .format-orbit-stage {
+    --orbit-outer: 17.5rem;
+    --orbit-inner: 13rem;
+    --orbit-radius: 8.65rem;
+    min-width: calc(var(--orbit-outer) + 1rem);
+    min-height: calc(var(--orbit-outer) + 1rem);
+    padding: 1.25rem;
+  }
+
+  @media (min-width: 640px) {
+    .format-orbit-stage {
+      --orbit-outer: 21.5rem;
+      --orbit-inner: 16rem;
+      --orbit-radius: 10.65rem;
+      padding: 1.75rem;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .format-orbit-stage {
+      --orbit-outer: 24.5rem;
+      --orbit-inner: 18rem;
+      --orbit-radius: 12.15rem;
+    }
+  }
+
+  .format-orbit-ring {
+    border-color: rgb(var(--foreground) / 0.1);
+  }
+
+  .format-orbit-ring-outer {
+    width: var(--orbit-outer);
+    height: var(--orbit-outer);
+  }
+
+  .format-orbit-ring-inner {
+    width: var(--orbit-inner);
+    height: var(--orbit-inner);
+    border-color: rgb(var(--foreground) / 0.06);
+  }
+
+  .format-orbit-spin {
+    width: var(--orbit-outer);
+    height: var(--orbit-outer);
+    animation: format-orbit-rotate 80s linear infinite;
+  }
+
+  .format-orbit-node {
+    position: absolute;
+    left: 0;
+    top: 0;
+    transform: translate(-50%, calc(-1 * var(--orbit-radius)));
+  }
+
+  .format-orbit-counter {
+    animation: format-orbit-rotate 80s linear infinite reverse;
+  }
+
+  .format-orbit-marker {
+    @apply flex min-w-[3.25rem] flex-col items-center justify-center gap-0.5 rounded-xl border px-2 py-1.5 backdrop-blur-[2px] sm:min-w-[3.5rem] sm:px-2.5 sm:py-2;
+    border-color: rgb(var(--foreground) / 0.12);
+    background-color: rgb(var(--foreground) / 0.04);
+    color: rgb(var(--foreground) / 0.55);
+    transition:
+      border-color 0.35s ease,
+      box-shadow 0.35s ease,
+      background-color 0.35s ease,
+      color 0.35s ease;
+  }
+
+  .format-orbit-marker-label {
+    @apply text-[9px] font-bold uppercase tracking-wide sm:text-[10px];
+  }
+
+  .format-orbit-marker-image {
+    color: rgb(251 146 60 / 0.85);
+    border-color: rgb(251 146 60 / 0.2);
+    background-color: rgb(251 146 60 / 0.08);
+  }
+
+  .format-orbit-marker-document {
+    color: rgb(96 165 250 / 0.9);
+    border-color: rgb(96 165 250 / 0.22);
+    background-color: rgb(96 165 250 / 0.08);
+  }
+
+  .format-orbit-marker-sheet {
+    color: rgb(74 222 128 / 0.9);
+    border-color: rgb(74 222 128 / 0.22);
+    background-color: rgb(74 222 128 / 0.08);
+  }
+
+  .format-orbit-marker-archive {
+    color: rgb(250 204 21 / 0.9);
+    border-color: rgb(250 204 21 / 0.22);
+    background-color: rgb(250 204 21 / 0.08);
+  }
+
+  .format-orbit-marker-code {
+    color: rgb(192 132 252 / 0.9);
+    border-color: rgb(192 132 252 / 0.22);
+    background-color: rgb(192 132 252 / 0.08);
+  }
+
+  .format-orbit-marker-vector {
+    color: rgb(45 212 191 / 0.9);
+    border-color: rgb(45 212 191 / 0.22);
+    background-color: rgb(45 212 191 / 0.08);
+  }
+
+  .format-orbit-marker-pdf {
+    color: rgb(248 113 113 / 0.95);
+    border-color: rgb(248 113 113 / 0.25);
+    background-color: rgb(248 113 113 / 0.1);
+  }
+
+  .format-orbit-marker-active {
+    opacity: 1;
+    box-shadow:
+      0 0 0 1px rgb(99 102 241 / 0.4),
+      0 0 24px 6px rgb(99 102 241 / 0.35);
+    border-color: rgb(99 102 241 / 0.55) !important;
+    background-color: rgb(99 102 241 / 0.14) !important;
+    color: rgb(129 140 248) !important;
+  }
+
+  @keyframes format-orbit-rotate {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
+    .format-orbit-spin,
+    .format-orbit-counter,
     .convert-sync-circle,
     .convert-sync-glow {
       animation: none;

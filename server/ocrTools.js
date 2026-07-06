@@ -7,7 +7,8 @@ import Tesseract from "tesseract.js";
 import pdfParse from "pdf-parse";
 import { pdf } from "pdf-to-img";
 import { resolvePythonCommand } from "./pdf2docx.js";
-import { buildStructuredDocx } from "./ocrDocx.js";
+import { buildFormDocx } from "./ocrDocx.js";
+import { buildSearchableOcrPdf } from "./ocrPdfOutput.js";
 import { structuredTextFromTsv, structuredTextFromTesseractData } from "./ocrLayout.js";
 import {
   OCR_FAST,
@@ -105,10 +106,11 @@ function pickBest(candidates) {
     .filter((c) => c.text?.trim() || c.structured?.trim())
     .sort((a, b) => b.score - a.score);
   const best = ranked[0];
-  if (!best) return { text: "", structured: "" };
+  if (!best) return { text: "", structured: "", tsvRaw: null };
   return {
     text: best.text?.trim() || best.structured?.trim() || "",
     structured: best.structured?.trim() || best.text?.trim() || "",
+    tsvRaw: best.tsvRaw || null,
   };
 }
 
@@ -116,13 +118,14 @@ function bestScore(candidates) {
   return candidates.reduce((max, c) => Math.max(max, c.score || 0), 0);
 }
 
-function pushCandidate(candidates, text, confidence = 0, structured = null) {
+function pushCandidate(candidates, text, confidence = 0, structured = null, tsvRaw = null) {
   const trimmed = (text || "").trim();
   const layout = (structured || trimmed).trim();
   if (!layout) return;
   candidates.push({
     text: trimmed || layout,
     structured: layout,
+    tsvRaw: tsvRaw || null,
     score: scoreOcrText(layout, confidence),
   });
 }
@@ -143,7 +146,7 @@ async function ocrWithSystemTesseractOnBuffer(
     watermark: watermark || (!scriptDoc && tesseractLang === "eng"),
   });
   const psms = quick ? QUICK_PSM : FULL_PSM;
-  let best = { text: "", structured: "", score: 0 };
+  let best = { text: "", structured: "", score: 0, tsvRaw: null };
 
   for (let vi = 0; vi < variants.length; vi++) {
     const prep = variants[vi];
@@ -178,8 +181,10 @@ async function ocrWithSystemTesseractOnBuffer(
         const structured = structuredTextFromTsv(tsvRaw, scriptDoc ? 45 : 55);
         const plain = structured.replace(/ {2,}/g, " ").trim();
         const tsvScore = scoreOcrText(structured);
-        if (tsvScore > best.score) best = { text: plain, structured, score: tsvScore };
-        if (best.score >= GOOD_SCORE) return { text: best.text, structured: best.structured };
+        if (tsvScore > best.score) best = { text: plain, structured, score: tsvScore, tsvRaw };
+        if (best.score >= GOOD_SCORE) {
+          return { text: best.text, structured: best.structured, tsvRaw: best.tsvRaw };
+        }
       } catch {
         /* try txt fallback */
       }
@@ -196,8 +201,10 @@ async function ocrWithSystemTesseractOnBuffer(
         const text = await fs.readFile(`${outBase}.txt`, "utf-8").catch(() => "");
         const plain = text.trim();
         const s = scoreOcrText(plain);
-        if (s > best.score) best = { text: plain, structured: plain, score: s };
-        if (best.score >= GOOD_SCORE) return { text: best.text, structured: best.structured };
+        if (s > best.score) best = { text: plain, structured: plain, score: s, tsvRaw: best.tsvRaw };
+        if (best.score >= GOOD_SCORE) {
+          return { text: best.text, structured: best.structured, tsvRaw: best.tsvRaw };
+        }
       } catch {
         /* next psm */
       }
@@ -205,7 +212,7 @@ async function ocrWithSystemTesseractOnBuffer(
   }
 
   if (!best.text && !best.structured) return null;
-  return { text: best.text, structured: best.structured || best.text };
+  return { text: best.text, structured: best.structured || best.text, tsvRaw: best.tsvRaw };
 }
 
 async function createOcrWorker(ocrLang) {
@@ -234,7 +241,7 @@ async function ocrWithTesseractJs(imageBuffer, tesseractLang, worker, { quick = 
     watermark: watermark || (!scriptDoc && tesseractLang === "eng"),
   });
   const psms = quick ? QUICK_PSM : FULL_PSM;
-  let best = { text: "", structured: "", score: 0 };
+  let best = { text: "", structured: "", score: 0, tsvRaw: null };
 
   for (const buf of variants) {
     for (const psm of psms) {
@@ -247,8 +254,10 @@ async function ocrWithTesseractJs(imageBuffer, tesseractLang, worker, { quick = 
         const structured = structuredTextFromTesseractData(data);
         const plain = (data.text || "").trim() || structured.replace(/ {2,}/g, " ");
         const s = scoreOcrText(structured, data.confidence || 0);
-        if (s > best.score) best = { text: plain, structured, score: s };
-        if (best.score >= GOOD_SCORE) return { text: best.text, structured: best.structured };
+        if (s > best.score) best = { text: plain, structured, score: s, tsvRaw: best.tsvRaw };
+        if (best.score >= GOOD_SCORE) {
+          return { text: best.text, structured: best.structured, tsvRaw: best.tsvRaw };
+        }
       } catch {
         /* next */
       }
@@ -256,7 +265,7 @@ async function ocrWithTesseractJs(imageBuffer, tesseractLang, worker, { quick = 
   }
 
   if (!best.text && !best.structured) return null;
-  return { text: best.text, structured: best.structured || best.text };
+  return { text: best.text, structured: best.structured || best.text, tsvRaw: best.tsvRaw };
 }
 
 async function ocrWithPythonBuffer(imageBuffer, tesseractLang, tmpDir, tag) {
@@ -322,7 +331,7 @@ async function ocrWatermarkFastPass(buffer, tesseractLang, tmpDir, tag, worker) 
         const tsvRaw = await fs.readFile(`${outBase}.tsv`, "utf-8").catch(() => "");
         const structured = structuredTextFromTsv(tsvRaw, 55);
         const plain = structured.replace(/ {2,}/g, " ").trim();
-        pushCandidate(candidates, plain, 0, structured);
+        pushCandidate(candidates, plain, 0, structured, tsvRaw);
       } catch {
         /* next */
       }
@@ -423,7 +432,12 @@ async function powerOcrPdfBuffer(buffer, tmpDir, lang, worker, progressId) {
     const pageBuf = Buffer.isBuffer(page) ? page : Buffer.from(page);
     const pageResult = await powerOcrImageBuffer(pageBuf, lang, tmpDir, `p${pageNum}`, worker);
     parts.push(`--- Page ${pageNum} ---\n${pageResult.text}`);
-    structuredPages.push(pageResult.structured || pageResult.text);
+    structuredPages.push({
+      structured: pageResult.structured || pageResult.text,
+      plain: pageResult.text,
+      imageBuffer: pageBuf,
+      tsvRaw: pageResult.tsvRaw || null,
+    });
     pageNum++;
   }
 
@@ -467,7 +481,14 @@ export async function runOcr({
       if (progressId) setOcrProgress(progressId, { phase: "ocr", done: 0, total: 1 });
       const pageResult = await powerOcrImageBuffer(buffer, ocrLang, tmpDir, "img", worker);
       text = pageResult.text;
-      structuredPages = [pageResult.structured || pageResult.text];
+      structuredPages = [
+        {
+          structured: pageResult.structured || pageResult.text,
+          plain: pageResult.text,
+          imageBuffer: buffer,
+          tsvRaw: pageResult.tsvRaw || null,
+        },
+      ];
       if (progressId) setOcrProgress(progressId, { phase: "done", done: 1, total: 1 });
     } else {
       throw new Error(`OCR supports PDF and images (PNG, JPG, etc.) — not ${ext.toUpperCase()}`);
@@ -486,7 +507,7 @@ export async function runOcr({
   }
 
   if (toFormat === "docx") {
-    const docxBuffer = await buildStructuredDocx(structuredPages.length ? structuredPages : [text]);
+    const docxBuffer = await buildFormDocx(structuredPages.length ? structuredPages : [{ structured: text }]);
     return {
       buffer: docxBuffer,
       filename: `${baseName}_ocr.docx`,
@@ -494,9 +515,23 @@ export async function runOcr({
     };
   }
 
+  if (toFormat === "pdf") {
+    const pdfBuffer = await buildSearchableOcrPdf(
+      structuredPages.length ? structuredPages : [{ structured: text, imageBuffer: buffer }]
+    );
+    return {
+      buffer: pdfBuffer,
+      filename: `${baseName}_ocr.pdf`,
+      mimeType: "application/pdf",
+    };
+  }
+
+  const pageText = (p) => (typeof p === "string" ? p : p.structured || p.plain || "");
   const txtBody =
     structuredPages.length > 0
-      ? structuredPages.map((p, i) => (structuredPages.length > 1 ? `--- Page ${i + 1} ---\n${p}` : p)).join("\n\n")
+      ? structuredPages
+          .map((p, i) => (structuredPages.length > 1 ? `--- Page ${i + 1} ---\n${pageText(p)}` : pageText(p)))
+          .join("\n\n")
       : text;
 
   return {

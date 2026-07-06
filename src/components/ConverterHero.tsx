@@ -6,6 +6,7 @@ import {
 import type { Operation } from "../data/catalog";
 import FormatIcon from "./FormatIcon";
 import FormatPickerPanel, { type PickerOption } from "./FormatPickerPanel";
+import OrbitBackdrop from "./OrbitBackdrop";
 
 interface ConverterHeroProps {
   title: string;
@@ -265,27 +266,29 @@ function FormatPickerRow({
   };
 
   return (
-    <div className="relative flex w-full shrink-0 items-center justify-center gap-0 sm:w-auto sm:justify-start">
-      <FormatSelector
-        value={fromFormat}
-        options={fromOptions}
-        onChange={handleFromChange}
-        label="Input format"
-        open={openPicker === "from"}
-        onOpen={openFrom}
-        onClose={() => setOpenPicker(null)}
-      />
-      <ConvertArrow onSwap={operation === "convert" ? swapFormats : undefined} />
-      <FormatSelector
-        value={toFormat}
-        options={toOptions}
-        onChange={handleToChange}
-        label="Output format"
-        open={openPicker === "to"}
-        onOpen={openTo}
-        onClose={() => setOpenPicker(null)}
-      />
-    </div>
+    <OrbitBackdrop highlightFormat={toFormat}>
+      <div className="relative flex w-full shrink-0 items-center justify-center gap-0 sm:w-auto sm:justify-start">
+        <FormatSelector
+          value={fromFormat}
+          options={fromOptions}
+          onChange={handleFromChange}
+          label="Input format"
+          open={openPicker === "from"}
+          onOpen={openFrom}
+          onClose={() => setOpenPicker(null)}
+        />
+        <ConvertArrow onSwap={operation === "convert" ? swapFormats : undefined} />
+        <FormatSelector
+          value={toFormat}
+          options={toOptions}
+          onChange={handleToChange}
+          label="Output format"
+          open={openPicker === "to"}
+          onOpen={openTo}
+          onClose={() => setOpenPicker(null)}
+        />
+      </div>
+    </OrbitBackdrop>
   );
 }
 
@@ -304,13 +307,6 @@ export default function ConverterHero({
 }: ConverterHeroProps) {
   return (
     <section className="relative mb-10">
-      <div className="pointer-events-none absolute -right-8 top-0 hidden overflow-hidden lg:block">
-        <div className="relative flex items-center justify-center">
-          <div className="absolute size-[280px] rounded-full border border-white/[0.05] animate-orbit-slow sm:size-[320px]" />
-          <div className="absolute size-[220px] rounded-full border border-white/[0.04] animate-orbit-fast" />
-        </div>
-      </div>
-
       <div
         className={`relative flex flex-col gap-6 sm:gap-8 ${hasFiles ? "mb-4" : "mb-6 sm:mb-8 lg:flex-row lg:items-start lg:justify-between"}`}
       >
