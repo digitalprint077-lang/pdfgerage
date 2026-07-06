@@ -14,6 +14,7 @@ import ProfilePage from "./pages/ProfilePage";
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
 import CheckoutPage from "./pages/CheckoutPage";
+import AssistantWidget from "./components/AssistantWidget";
 import "./index.css";
 
 createRoot(document.getElementById("root")!).render(
@@ -38,6 +39,7 @@ createRoot(document.getElementById("root")!).render(
             <Route path="/login" element={<LoginPage />} />
             <Route path="/signup" element={<SignupPage />} />
           </Routes>
+          <AssistantWidget />
           </BrowserRouter>
         </AuthProvider>
       </ThemeProvider>

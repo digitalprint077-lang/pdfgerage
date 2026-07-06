@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import pdfParse from "pdf-parse";
 import { extractTextFromPdfBuffer } from "./pdfRender.js";
+import { askAi, getAiProvider, isAiConfigured } from "./aiClient.js";
 
 const SESSION_TTL_MS = 2 * 60 * 60 * 1000;
 const MAX_FILE_BYTES = 25 * 1024 * 1024;
@@ -18,13 +19,13 @@ function pruneSessions() {
 }
 
 export function isPdfChatConfigured() {
-  return Boolean(process.env.OPENAI_API_KEY || process.env.GEMINI_API_KEY);
+  return isAiConfigured();
 }
 
 export function pdfChatConfigHandler(_req, res) {
   res.json({
-    available: isPdfChatConfigured(),
-    provider: process.env.OPENAI_API_KEY ? "openai" : process.env.GEMINI_API_KEY ? "gemini" : null,
+    available: isAiConfigured(),
+    provider: getAiProvider(),
   });
 }
 
@@ -54,81 +55,6 @@ function trimForPrompt(text) {
   const head = text.slice(0, Math.floor(MAX_DOC_CHARS * 0.7));
   const tail = text.slice(-Math.floor(MAX_DOC_CHARS * 0.25));
   return `${head}\n\n[... middle section omitted for length ...]\n\n${tail}`;
-}
-
-async function callOpenAi(messages) {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) throw new Error("OpenAI API key not configured");
-
-  const baseUrl = (process.env.OPENAI_BASE_URL || "https://api.openai.com/v1").replace(/\/$/, "");
-  const model = process.env.OPENAI_CHAT_MODEL || "gpt-4o-mini";
-
-  const res = await fetch(`${baseUrl}/chat/completions`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model,
-      messages,
-      temperature: 0.3,
-      max_tokens: 2048,
-    }),
-  });
-
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw new Error(data.error?.message || data.error || "AI request failed");
-  }
-
-  const reply = data.choices?.[0]?.message?.content?.trim();
-  if (!reply) throw new Error("Empty AI response");
-  return reply;
-}
-
-async function callGemini(messages) {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error("Gemini API key not configured");
-
-  const model = process.env.GEMINI_CHAT_MODEL || "gemini-2.0-flash";
-  const system = messages.find((m) => m.role === "system")?.content || "";
-  const turns = messages.filter((m) => m.role !== "system");
-
-  const contents = turns.map((m) => ({
-    role: m.role === "assistant" ? "model" : "user",
-    parts: [{ text: m.content }],
-  }));
-
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
-
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      systemInstruction: system ? { parts: [{ text: system }] } : undefined,
-      contents,
-      generationConfig: {
-        temperature: 0.3,
-        maxOutputTokens: 2048,
-      },
-    }),
-  });
-
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw new Error(data.error?.message || "Gemini request failed");
-  }
-
-  const reply = data.candidates?.[0]?.content?.parts?.map((p) => p.text).join("")?.trim();
-  if (!reply) throw new Error("Empty AI response");
-  return reply;
-}
-
-async function askAi(messages) {
-  if (process.env.OPENAI_API_KEY) return callOpenAi(messages);
-  if (process.env.GEMINI_API_KEY) return callGemini(messages);
-  throw new Error("AI chat is not configured. Add OPENAI_API_KEY or GEMINI_API_KEY on the server.");
 }
 
 export async function createPdfChatSessionHandler(req, res) {

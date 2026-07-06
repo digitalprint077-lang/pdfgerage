@@ -42,7 +42,7 @@ export default function Header({ heroBand = false }: HeaderProps) {
     }
   };
 
-  const showHeroNav = heroBand && !darkMode;
+  const showHeroNav = heroBand;
 
   return (
     <header className={showHeroNav ? "glass-nav glass-nav-hero" : "glass-nav"}>

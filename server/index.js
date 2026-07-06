@@ -31,6 +31,11 @@ import {
   pdfChatMessageHandler,
   deletePdfChatSessionHandler,
 } from "./pdfChat.js";
+import {
+  assistantConfigHandler,
+  assistantMessageHandler,
+  deleteAssistantSessionHandler,
+} from "./assistantChat.js";
 import { envInt, mapConcurrent } from "./perf.js";
 
 const BATCH_CONCURRENCY = envInt("CONVERT_BATCH_CONCURRENCY", 3);
@@ -107,6 +112,10 @@ app.get("/api/pdf-chat/config", pdfChatConfigHandler);
 app.post("/api/pdf-chat/session", optionalAuth, upload.single("file"), createPdfChatSessionHandler);
 app.post("/api/pdf-chat/message", optionalAuth, pdfChatMessageHandler);
 app.delete("/api/pdf-chat/session/:sessionId", deletePdfChatSessionHandler);
+
+app.get("/api/assistant/config", assistantConfigHandler);
+app.post("/api/assistant/message", optionalAuth, assistantMessageHandler);
+app.delete("/api/assistant/session/:sessionId", deleteAssistantSessionHandler);
 
 const distPath = path.join(__dirname, "..", "dist");
 

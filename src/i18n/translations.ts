@@ -57,6 +57,31 @@ export type TranslationKey =
   | "chatPdfPlaceholder"
   | "chatPdfSend"
   | "chatPdfDeployNeeded"
+  | "assistantTitle"
+  | "assistantSubtitle"
+  | "assistantWelcome"
+  | "assistantPlaceholder"
+  | "assistantSend"
+  | "assistantThinking"
+  | "assistantOpen"
+  | "assistantClose"
+  | "assistantNewChat"
+  | "assistantNotConfigured"
+  | "assistantUnavailable"
+  | "assistantContact"
+  | "assistantSuggestConvert"
+  | "assistantSuggestOcr"
+  | "assistantSuggestChatPdf"
+  | "assistantHubTitle"
+  | "assistantAsk"
+  | "assistantTileConvert"
+  | "assistantTileConvertSub"
+  | "assistantTileOcr"
+  | "assistantTileOcrSub"
+  | "assistantTileChatPdf"
+  | "assistantTileChatPdfSub"
+  | "assistantTileBilling"
+  | "assistantTileBillingSub"
   | "login"
   | "signup"
   | "logout"
@@ -205,6 +230,31 @@ const en: Dict = {
   chatPdfSend: "Send",
   chatPdfDeployNeeded:
     "Chat with PDF AI is not live on the server yet. Deploy the latest API build, then add OPENAI_API_KEY or GEMINI_API_KEY on Railway.",
+  assistantTitle: "PDF Gerage Assistant",
+  assistantSubtitle: "Ask how to convert, OCR, or use any tool",
+  assistantWelcome: "Hi! I can help you convert files, use OCR, merge PDFs, translate documents, and more. What do you need?",
+  assistantPlaceholder: "Ask how to convert, compress, OCR…",
+  assistantSend: "Send",
+  assistantThinking: "Thinking…",
+  assistantOpen: "Open assistant",
+  assistantClose: "Close assistant",
+  assistantNewChat: "New conversation",
+  assistantNotConfigured: "The AI assistant is not configured on this server yet. You can still browse tools from the menu or visit our contact page.",
+  assistantUnavailable: "Assistant unavailable",
+  assistantContact: "Contact support",
+  assistantSuggestConvert: "How do I convert PDF to Word?",
+  assistantSuggestOcr: "How does OCR work on scans?",
+  assistantSuggestChatPdf: "Where is Chat with PDF AI?",
+  assistantHubTitle: "How can we help?",
+  assistantAsk: "Ask",
+  assistantTileConvert: "Convert",
+  assistantTileConvertSub: "PDF, images, docs…",
+  assistantTileOcr: "OCR",
+  assistantTileOcrSub: "Scanned text",
+  assistantTileChatPdf: "Chat PDF",
+  assistantTileChatPdfSub: "Ask your document",
+  assistantTileBilling: "Billing",
+  assistantTileBillingSub: "Plans & pricing",
   login: "Log in",
   signup: "Sign up",
   logout: "Log out",
