@@ -43,6 +43,20 @@ export type TranslationKey =
   | "toolGroups.archives"
   | "toolGroups.ocr"
   | "toolGroups.translate"
+  | "toolGroups.ai"
+  | "chatPdfTitle"
+  | "chatPdfSubtitle"
+  | "chatPdfNotConfigured"
+  | "chatPdfUploadTitle"
+  | "chatPdfUploadHint"
+  | "chatPdfSelectPdf"
+  | "chatPdfReady"
+  | "chatPdfNewFile"
+  | "chatPdfAskAnything"
+  | "chatPdfThinking"
+  | "chatPdfPlaceholder"
+  | "chatPdfSend"
+  | "chatPdfDeployNeeded"
   | "login"
   | "signup"
   | "logout"
@@ -176,6 +190,21 @@ const en: Dict = {
   "toolGroups.archives": "Archives",
   "toolGroups.ocr": "OCR",
   "toolGroups.translate": "Translate",
+  "toolGroups.ai": "AI Tools",
+  chatPdfTitle: "Chat with PDF AI",
+  chatPdfSubtitle: "Upload a PDF and ask questions — get summaries, key points, and answers from your document.",
+  chatPdfNotConfigured: "AI chat is not available yet. The server needs an OpenAI or Gemini API key.",
+  chatPdfUploadTitle: "Upload your PDF",
+  chatPdfUploadHint: "Drop a PDF here or click to browse. Text is extracted for AI — scanned PDFs may need OCR first.",
+  chatPdfSelectPdf: "Select PDF",
+  chatPdfReady: "Ready to chat",
+  chatPdfNewFile: "New file",
+  chatPdfAskAnything: "Ask anything about this document",
+  chatPdfThinking: "Thinking…",
+  chatPdfPlaceholder: "Ask a question about your PDF…",
+  chatPdfSend: "Send",
+  chatPdfDeployNeeded:
+    "Chat with PDF AI is not live on the server yet. Deploy the latest API build, then add OPENAI_API_KEY or GEMINI_API_KEY on Railway.",
   login: "Log in",
   signup: "Sign up",
   logout: "Log out",

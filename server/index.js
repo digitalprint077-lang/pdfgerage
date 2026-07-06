@@ -25,6 +25,12 @@ import { assertWithinDailyLimit, getUsageSnapshot, recordSuccessfulJob } from ".
 import { saveContactMessage } from "./db.js";
 import { buildStatusSnapshot } from "./statusMonitor.js";
 import { billingConfigHandler, createCheckoutHandler, createCardCheckoutHandler, billingWebhookHandler, getOrderHandler, submitOrderHandler, adminFulfillHandler } from "./billing.js";
+import {
+  createPdfChatSessionHandler,
+  pdfChatConfigHandler,
+  pdfChatMessageHandler,
+  deletePdfChatSessionHandler,
+} from "./pdfChat.js";
 import { envInt, mapConcurrent } from "./perf.js";
 
 const BATCH_CONCURRENCY = envInt("CONVERT_BATCH_CONCURRENCY", 3);
@@ -96,6 +102,11 @@ app.get("/api/billing/order/:orderId", requireAuth, getOrderHandler);
 app.post("/api/billing/order/:orderId/card", requireAuth, createCardCheckoutHandler);
 app.post("/api/billing/order/:orderId/submitted", requireAuth, submitOrderHandler);
 app.post("/api/billing/admin/fulfill", adminFulfillHandler);
+
+app.get("/api/pdf-chat/config", pdfChatConfigHandler);
+app.post("/api/pdf-chat/session", optionalAuth, upload.single("file"), createPdfChatSessionHandler);
+app.post("/api/pdf-chat/message", optionalAuth, pdfChatMessageHandler);
+app.delete("/api/pdf-chat/session/:sessionId", deletePdfChatSessionHandler);
 
 const distPath = path.join(__dirname, "..", "dist");
 

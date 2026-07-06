@@ -16,7 +16,8 @@ export type Operation =
   | "extract"
   | "create-archive"
   | "ocr"
-  | "translate";
+  | "translate"
+  | "chat";
 
 export interface FormatDef {
   id: string;
@@ -218,7 +219,7 @@ export function getFormat(id: string): FormatDef | undefined {
 export interface ToolDef {
   id: string;
   label: string;
-  group: "convert" | "optimize" | "merge" | "capture" | "archives" | "ocr" | "translate";
+  group: "convert" | "optimize" | "merge" | "capture" | "archives" | "ocr" | "translate" | "ai";
   category?: FormatCategory;
   operation: Operation;
   defaultFrom?: string;
@@ -244,6 +245,7 @@ export const TOOLS: ToolDef[] = [
   { id: "pdf-ocr", label: "PDF OCR", group: "ocr", operation: "ocr", defaultFrom: "pdf", defaultTo: "txt", description: "Extract text from scanned PDFs using OCR." },
   { id: "image-ocr", label: "Image OCR", group: "ocr", operation: "ocr", defaultFrom: "png", defaultTo: "txt", description: "Recognize text in images (PNG, JPG, etc.)." },
   { id: "translate-doc", label: "Translate Document", group: "translate", operation: "translate", defaultFrom: "pdf", defaultTo: "txt", description: "Translate PDF, DOCX, or TXT to another language." },
+  { id: "chat-pdf", label: "Chat with PDF AI", group: "ai", operation: "chat", defaultFrom: "pdf", description: "Upload a PDF and ask questions — summaries, key points, and answers powered by AI." },
 ];
 
 export const POPULAR_CONVERSIONS = [
@@ -384,6 +386,7 @@ export function supportsMultiFileConvert(fromFormat: string, toFormat: string | 
 export function getAcceptTypes(fromFormat: string, toFormat: string, operation: Operation): string {
   if (operation === "ocr") return ".pdf,.png,.jpg,.jpeg,.webp,.gif,.bmp,.tiff,.tif,application/pdf,image/*";
   if (operation === "translate") return ".pdf,.docx,.doc,.txt,.md,application/pdf";
+  if (operation === "chat") return ".pdf,application/pdf";
   if (operation === "merge") return ".pdf,application/pdf";
   if (operation === "create-archive") return "*/*";
   if (operation === "extract") return getArchiveAcceptTypes();

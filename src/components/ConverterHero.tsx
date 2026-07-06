@@ -193,6 +193,7 @@ function ToolBadge({ operation }: { operation: Operation }) {
     "create-archive": "Create ZIP",
     ocr: "OCR",
     translate: "Translate",
+    chat: "Chat with PDF AI",
   };
   return (
     <span className="mb-3 inline-block rounded-full border border-brand/30 bg-brand/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-brand">
