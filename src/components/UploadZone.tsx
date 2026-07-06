@@ -464,7 +464,7 @@ export default function UploadZone({
                 </label>
               </div>
               <p className="max-w-lg text-xs text-gray-500 dark:text-gray-400">
-                High-accuracy OCR: up to 288 DPI, image enhancement, and multi-engine Tesseract. Large PDFs may take 1–3 minutes.
+                High-accuracy OCR: up to 360 DPI, multi-engine Tesseract. For Urdu/Arabic forms (e.g. route permits), select <strong>Urdu</strong> or <strong>Arabic</strong> as OCR language — not English.
               </p>
             </div>
           )}

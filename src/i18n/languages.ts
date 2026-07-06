@@ -23,7 +23,7 @@ export const UI_LANGUAGES: LanguageOption[] = [
 
 export const OCR_LANG_OPTIONS = [
   { code: "eng", label: "English", country: "US" },
-  { code: "urd", label: "Urdu", country: "PK" },
+  { code: "urd", label: "Urdu — Pakistani forms", country: "PK" },
   { code: "ara", label: "Arabic", country: "SA" },
   { code: "hin", label: "Hindi", country: "IN" },
   { code: "fra", label: "French", country: "FR" },

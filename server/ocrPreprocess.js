@@ -3,9 +3,8 @@ import { envBool } from "./perf.js";
 
 export const OCR_FAST = envBool("OCR_FAST", false);
 
-/** Target longest side for OCR preprocessing. Higher = sharper text, slower. */
-const TARGET_MIN_PX = OCR_FAST ? 2200 : 3000;
-const MAX_PX = OCR_FAST ? 3600 : 4500;
+const TARGET_MIN_PX = OCR_FAST ? 2200 : 3200;
+const MAX_PX = OCR_FAST ? 4000 : 5200;
 
 async function resizeForOcr(buffer) {
   const meta = await sharp(buffer).metadata();
@@ -34,34 +33,49 @@ async function resizeForOcr(buffer) {
   return pipeline;
 }
 
-/**
- * Enhance scans/photos for OCR: grayscale, contrast, sharpen, upscale.
- */
+/** Standard — works for Latin and Urdu/Arabic (no harsh threshold). */
 export async function preprocessForOcr(buffer) {
   const pipeline = await resizeForOcr(buffer);
   return pipeline
     .grayscale()
     .normalize()
-    .linear(1.15, -12)
-    .sharpen({ sigma: 1.4, m1: 0.5, m2: 0.35 })
+    .linear(1.12, -10)
+    .sharpen({ sigma: 1.2, m1: 0.45, m2: 0.3 })
     .png()
     .toBuffer();
 }
 
-/** Second pass: stronger contrast for faint text */
+/** For forms / faint scans — gentle contrast only. */
+export async function preprocessForFormScan(buffer) {
+  const pipeline = await resizeForOcr(buffer);
+  return pipeline
+    .grayscale()
+    .normalize()
+    .linear(1.25, -18)
+    .median(1)
+    .sharpen({ sigma: 0.9 })
+    .png()
+    .toBuffer();
+}
+
+/** Strong binarization — Latin-only fallback. */
 export async function preprocessForOcrAggressive(buffer) {
   const base = await preprocessForOcr(buffer);
   return sharp(base)
-    .linear(1.35, -28)
-    .threshold(168, { grayscale: true })
+    .linear(1.3, -24)
+    .threshold(175, { grayscale: true })
     .png()
     .toBuffer();
 }
 
-/** All preprocessing variants — quick mode uses one pass only. */
-export async function getOcrPreprocessVariants(buffer, quick = false) {
+export async function getOcrPreprocessVariants(buffer, quick = false, { includeAggressive = true } = {}) {
   const standard = await preprocessForOcr(buffer);
   if (quick || OCR_FAST) return [standard];
-  const aggressive = await preprocessForOcrAggressive(buffer);
-  return [standard, aggressive];
+
+  const form = await preprocessForFormScan(buffer);
+  const variants = [standard, form];
+  if (includeAggressive) {
+    variants.push(await preprocessForOcrAggressive(buffer));
+  }
+  return variants;
 }

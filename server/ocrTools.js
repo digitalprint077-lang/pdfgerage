@@ -13,6 +13,7 @@ import {
   getOcrPreprocessVariants,
   preprocessForOcr,
 } from "./ocrPreprocess.js";
+import { getOcrLanguageAttempts, scoreOcrText, textFromTsv } from "./ocrQuality.js";
 import { setOcrProgress, clearOcrProgress } from "./ocrProgress.js";
 import { envInt } from "./perf.js";
 
@@ -26,10 +27,10 @@ const IMAGE_EXT = new Set([
   "tif", "tiff", "webp", "x3f",
 ]);
 
-const PDF_SCALE = envInt("OCR_PDF_SCALE", OCR_FAST ? 3 : 4);
-const QUICK_PSM = ["6", "3"];
-const FULL_PSM = OCR_FAST ? ["6", "3"] : ["3", "6", "11"];
-const GOOD_SCORE = OCR_FAST ? 80 : 100;
+const PDF_SCALE = envInt("OCR_PDF_SCALE", OCR_FAST ? 3 : 5);
+const QUICK_PSM = ["4", "6", "3"];
+const FULL_PSM = OCR_FAST ? ["4", "6", "3"] : ["4", "6", "3", "11"];
+const GOOD_SCORE = OCR_FAST ? 120 : 180;
 const PYTHON_TIMEOUT_MS = 90_000;
 const TESSERACT_CALL_MS = 120_000;
 const SYSTEM_TESSERACT_MS = 90_000;
@@ -51,14 +52,6 @@ const LANG_MAP = {
   tur: "tur",
   nld: "nld",
   pol: "pol",
-};
-
-const LANG_BOOST = {
-  urd: "urd+eng",
-  ara: "ara+eng",
-  hin: "hin+eng",
-  chi_sim: "chi_sim+eng",
-  jpn: "jpn+eng",
 };
 
 let cachedTesseractExe = null;
@@ -98,17 +91,11 @@ async function findSystemTesseract() {
 
 function resolveLang(lang) {
   const code = LANG_MAP[lang] || lang || "eng";
-  return LANG_BOOST[code] || code;
+  return code;
 }
 
-function scoreResult(text, confidence = 0) {
-  const trimmed = (text || "").trim();
-  if (!trimmed) return 0;
-  const words = trimmed.split(/\s+/).filter(Boolean).length;
-  const alnum = (trimmed.match(/[\p{L}\p{N}]/gu) || []).length;
-  const ratio = alnum / Math.max(trimmed.length, 1);
-  const quality = ratio < 0.25 && trimmed.length > 40 ? 0.55 : 1;
-  return (alnum * 2 + words * 8 + confidence * 0.8) * quality;
+function isScriptLang(tesseractLang) {
+  return /urd|ara|hin|fas|pus|uig/i.test(tesseractLang);
 }
 
 function pickBest(candidates) {
@@ -120,13 +107,27 @@ function bestScore(candidates) {
   return candidates.reduce((max, c) => Math.max(max, c.score || 0), 0);
 }
 
-async function ocrWithSystemTesseractOnBuffer(imageBuffer, lang, tmpDir, tag, { quick = false } = {}) {
+function pushCandidate(candidates, text, confidence = 0) {
+  const trimmed = (text || "").trim();
+  if (!trimmed) return;
+  candidates.push({ text: trimmed, score: scoreOcrText(trimmed, confidence) });
+}
+
+async function ocrWithSystemTesseractOnBuffer(
+  imageBuffer,
+  tesseractLang,
+  tmpDir,
+  tag,
+  { quick = false } = {}
+) {
   const exe = await findSystemTesseract();
   if (!exe) return null;
 
-  const variants = await getOcrPreprocessVariants(imageBuffer, quick);
+  const scriptDoc = isScriptLang(tesseractLang);
+  const variants = await getOcrPreprocessVariants(imageBuffer, quick, {
+    includeAggressive: !scriptDoc,
+  });
   const psms = quick ? QUICK_PSM : FULL_PSM;
-  const langs = resolveLang(lang);
   let best = { text: "", score: 0 };
 
   for (let vi = 0; vi < variants.length; vi++) {
@@ -136,23 +137,52 @@ async function ocrWithSystemTesseractOnBuffer(imageBuffer, lang, tmpDir, tag, { 
     await fs.writeFile(imgPath, prep);
 
     for (const psm of psms) {
+      const args = [
+        imgPath,
+        outBase,
+        "-l",
+        tesseractLang,
+        "--oem",
+        "1",
+        "--psm",
+        psm,
+        "-c",
+        "preserve_interword_spaces=1",
+      ];
+
       try {
         await withTimeout(
-          execFileAsync(
-            exe,
-            [imgPath, outBase, "-l", langs, "--oem", "1", "--psm", psm, "-c", "preserve_interword_spaces=1", "txt"],
-            { timeout: SYSTEM_TESSERACT_MS, maxBuffer: 30 * 1024 * 1024 }
-          ),
+          execFileAsync(exe, [...args, "tsv"], {
+            timeout: SYSTEM_TESSERACT_MS,
+            maxBuffer: 30 * 1024 * 1024,
+          }),
           SYSTEM_TESSERACT_MS + 5000,
           "System OCR"
         );
-        const txtPath = `${outBase}.txt`;
-        const text = await fs.readFile(txtPath, "utf-8").catch(() => "");
-        const s = scoreResult(text);
+        const tsvRaw = await fs.readFile(`${outBase}.tsv`, "utf-8").catch(() => "");
+        const tsvText = textFromTsv(tsvRaw, scriptDoc ? 45 : 55);
+        const tsvScore = scoreOcrText(tsvText);
+        if (tsvScore > best.score) best = { text: tsvText, score: tsvScore };
+        if (best.score >= GOOD_SCORE) return best.text;
+      } catch {
+        /* try txt fallback */
+      }
+
+      try {
+        await withTimeout(
+          execFileAsync(exe, [...args, "txt"], {
+            timeout: SYSTEM_TESSERACT_MS,
+            maxBuffer: 30 * 1024 * 1024,
+          }),
+          SYSTEM_TESSERACT_MS + 5000,
+          "System OCR"
+        );
+        const text = await fs.readFile(`${outBase}.txt`, "utf-8").catch(() => "");
+        const s = scoreOcrText(text);
         if (s > best.score) best = { text: text.trim(), score: s };
         if (best.score >= GOOD_SCORE) return best.text;
       } catch {
-        /* try next psm */
+        /* next psm */
       }
     }
   }
@@ -161,26 +191,29 @@ async function ocrWithSystemTesseractOnBuffer(imageBuffer, lang, tmpDir, tag, { 
 }
 
 async function createOcrWorker(ocrLang) {
-  const langs = resolveLang(ocrLang);
+  const langs = getOcrLanguageAttempts(ocrLang)[0] || "eng";
   const primary = langs.split("+")[0] || "eng";
   const worker = await Tesseract.createWorker(primary, 1, { logger: () => {} });
 
-  if (langs !== primary) {
+  if (langs.includes("+")) {
     try {
       for (const pack of langs.split("+")) {
         await worker.loadLanguage(pack);
       }
       await worker.initialize(langs);
     } catch {
-      /* wasm language pack may be unavailable — keep primary */
+      /* wasm pack may be missing */
     }
   }
 
   return worker;
 }
 
-async function ocrWithTesseractJs(imageBuffer, lang, worker, { quick = false } = {}) {
-  const variants = await getOcrPreprocessVariants(imageBuffer, quick);
+async function ocrWithTesseractJs(imageBuffer, tesseractLang, worker, { quick = false } = {}) {
+  const scriptDoc = isScriptLang(tesseractLang);
+  const variants = await getOcrPreprocessVariants(imageBuffer, quick, {
+    includeAggressive: !scriptDoc,
+  });
   const psms = quick ? QUICK_PSM : FULL_PSM;
   let best = { text: "", score: 0 };
 
@@ -191,13 +224,9 @@ async function ocrWithTesseractJs(imageBuffer, lang, worker, { quick = false } =
           tessedit_pageseg_mode: psm,
           preserve_interword_spaces: "1",
         });
-        const { data } = await withTimeout(
-          worker.recognize(buf),
-          TESSERACT_CALL_MS,
-          "Browser OCR"
-        );
+        const { data } = await withTimeout(worker.recognize(buf), TESSERACT_CALL_MS, "Browser OCR");
         const text = (data.text || "").trim();
-        const s = scoreResult(text, data.confidence || 0);
+        const s = scoreOcrText(text, data.confidence || 0);
         if (s > best.score) best = { text, score: s };
         if (best.score >= GOOD_SCORE) return best.text;
       } catch {
@@ -209,7 +238,7 @@ async function ocrWithTesseractJs(imageBuffer, lang, worker, { quick = false } =
   return best.text;
 }
 
-async function ocrWithPythonBuffer(imageBuffer, lang, tmpDir, tag) {
+async function ocrWithPythonBuffer(imageBuffer, tesseractLang, tmpDir, tag) {
   const python = await resolvePythonCommand();
   if (!python) return null;
 
@@ -219,7 +248,7 @@ async function ocrWithPythonBuffer(imageBuffer, lang, tmpDir, tag) {
 
   try {
     await withTimeout(
-      execFileAsync(python.cmd, [...python.args, OCR_SCRIPT, inputPath, txtPath, resolveLang(lang)], {
+      execFileAsync(python.cmd, [...python.args, OCR_SCRIPT, inputPath, txtPath, tesseractLang], {
         timeout: PYTHON_TIMEOUT_MS,
         maxBuffer: 30 * 1024 * 1024,
       }),
@@ -233,27 +262,35 @@ async function ocrWithPythonBuffer(imageBuffer, lang, tmpDir, tag) {
   }
 }
 
-async function powerOcrImageBuffer(buffer, lang, tmpDir, tag, worker) {
+async function powerOcrImageBuffer(buffer, ocrLang, tmpDir, tag, worker) {
+  const langAttempts = getOcrLanguageAttempts(ocrLang);
   const candidates = [];
 
-  const sysQuick = await ocrWithSystemTesseractOnBuffer(buffer, lang, tmpDir, `${tag}-sys`, { quick: true });
-  if (sysQuick) candidates.push({ text: sysQuick, score: scoreResult(sysQuick) });
-  if (bestScore(candidates) >= GOOD_SCORE) return pickBest(candidates);
+  for (const tLang of langAttempts) {
+    const sysQuick = await ocrWithSystemTesseractOnBuffer(buffer, tLang, tmpDir, `${tag}-${tLang}-q`, {
+      quick: true,
+    });
+    if (sysQuick) pushCandidate(candidates, sysQuick);
+    if (bestScore(candidates) >= GOOD_SCORE) break;
 
-  const sysFull = await ocrWithSystemTesseractOnBuffer(buffer, lang, tmpDir, `${tag}-sysf`, { quick: false });
-  if (sysFull) candidates.push({ text: sysFull, score: scoreResult(sysFull) });
-  if (bestScore(candidates) >= GOOD_SCORE) return pickBest(candidates);
-
-  const hasSystem = Boolean(await findSystemTesseract());
-  if (!hasSystem || bestScore(candidates) < GOOD_SCORE) {
-    const js = await ocrWithTesseractJs(buffer, lang, worker, { quick: bestScore(candidates) >= 50 });
-    if (js) candidates.push({ text: js, score: scoreResult(js) });
-    if (bestScore(candidates) >= GOOD_SCORE) return pickBest(candidates);
+    const sysFull = await ocrWithSystemTesseractOnBuffer(buffer, tLang, tmpDir, `${tag}-${tLang}-f`, {
+      quick: false,
+    });
+    if (sysFull) pushCandidate(candidates, sysFull);
+    if (bestScore(candidates) >= GOOD_SCORE) break;
   }
 
-  if (bestScore(candidates) < 50) {
-    const py = await ocrWithPythonBuffer(buffer, lang, tmpDir, tag);
-    if (py) candidates.push({ text: py, score: scoreResult(py) });
+  if (bestScore(candidates) < GOOD_SCORE) {
+    const jsLang = langAttempts[0];
+    const js = await ocrWithTesseractJs(buffer, jsLang, worker, { quick: bestScore(candidates) >= 80 });
+    if (js) pushCandidate(candidates, js);
+  }
+
+  if (bestScore(candidates) < 100) {
+    for (const tLang of langAttempts.slice(0, 2)) {
+      const py = await ocrWithPythonBuffer(buffer, tLang, tmpDir, `${tag}-${tLang}`);
+      if (py) pushCandidate(candidates, py);
+    }
   }
 
   return pickBest(candidates);
@@ -345,7 +382,7 @@ export async function runOcr({
 
   if (!text.trim()) {
     throw new Error(
-      "OCR found no text. Use a sharper scan, pick the correct language, or try a smaller file."
+      "OCR found no text. Pick the correct language (Urdu for Urdu documents), use a sharper scan, or try TXT output first."
     );
   }
 
