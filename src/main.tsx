@@ -12,6 +12,7 @@ import ContactPage from "./pages/ContactPage";
 import PricingPage from "./pages/PricingPage";
 import ProfilePage from "./pages/ProfilePage";
 import LoginPage from "./pages/LoginPage";
+import SignupPage from "./pages/SignupPage";
 import CheckoutPage from "./pages/CheckoutPage";
 import "./index.css";
 
