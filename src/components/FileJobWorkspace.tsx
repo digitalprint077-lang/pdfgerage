@@ -11,7 +11,9 @@ import { formatFileTypeLabel } from "../utils/outputFormats";
 import { useI18n } from "../i18n/I18nContext";
 import { OCR_LANG_OPTIONS, TRANSLATE_LANG_OPTIONS } from "../i18n/languages";
 import SelectDropdown from "./SelectDropdown";
+import UsageLimitBanner from "./UsageLimitBanner";
 import { getOutputFormatOptions } from "../utils/outputFormats";
+import type { UsageBlockVariant } from "../hooks/useUsageSnapshot";
 
 const OUTPUT_FORMAT_OPTIONS = [
   { code: "txt", label: "TXT" },
@@ -46,6 +48,9 @@ interface FileJobWorkspaceProps {
   onTranslateToChange: (v: string) => void;
   translateProgress?: { phase: string; done: number; total: number } | null;
   ocrProgress?: { phase: string; done: number; total: number } | null;
+  usageBlocked?: boolean;
+  usageBlockVariant?: UsageBlockVariant;
+  usageLimit?: number;
 }
 
 export default function FileJobWorkspace({
@@ -75,6 +80,9 @@ export default function FileJobWorkspace({
   onTranslateToChange,
   translateProgress,
   ocrProgress,
+  usageBlocked = false,
+  usageBlockVariant = "daily",
+  usageLimit = 15,
 }: FileJobWorkspaceProps) {
   const { t } = useI18n();
   const addInputRef = useRef<HTMLInputElement>(null);
@@ -167,7 +175,7 @@ export default function FileJobWorkspace({
             </div>
 
             <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-              {!isConverting ? (
+              {!isConverting && !usageBlocked ? (
                 <button
                   type="button"
                   onClick={onConvert}
@@ -342,43 +350,49 @@ export default function FileJobWorkspace({
       {/* Footer — pre-convert only */}
       {!isDone ? (
         <div className="border-t border-[rgb(var(--border))] bg-[rgb(var(--card-hover)/0.5)] px-4 py-3 sm:px-5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-2 text-sm">
-            {needsFormat && (
-              <svg className="h-4 w-4 shrink-0 text-[rgb(var(--muted))]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            )}
-            <span className={error ? "text-red-400" : "text-[rgb(var(--muted))]"}>
-              {statusMessage || (canConvert ? "Ready to convert" : "Add more files")}
-            </span>
-          </div>
+          {usageBlocked ? (
+            <UsageLimitBanner variant={usageBlockVariant} limit={usageLimit} />
+          ) : (
+            <>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-2 text-sm">
+                  {needsFormat && (
+                    <svg className="h-4 w-4 shrink-0 text-[rgb(var(--muted))]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  )}
+                  <span className={error ? "text-red-400" : "text-[rgb(var(--muted))]"}>
+                    {statusMessage || (canConvert ? "Ready to convert" : "Add more files")}
+                  </span>
+                </div>
 
-          <div className="flex items-center gap-2">
-            <AddFilesMenu
-              onAddFiles={() => addInputRef.current?.click()}
-              onAddUrl={onAddUrl}
-              onCloudImport={onCloudImport}
-              placement="above"
-            />
-            <button
-              type="button"
-              onClick={onConvert}
-              disabled={!canConvert || isConverting}
-              className="btn-primary gap-2 px-5 py-2.5 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              {isConverting ? (
-                <Spinner />
-              ) : (
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-              )}
-              {convertLabel}
-            </button>
-          </div>
-          </div>
-          <p className="mt-2 text-center text-xs text-[rgb(var(--muted))] sm:text-left">{t("filesRemovedNote")}</p>
+                <div className="flex items-center gap-2">
+                  <AddFilesMenu
+                    onAddFiles={() => addInputRef.current?.click()}
+                    onAddUrl={onAddUrl}
+                    onCloudImport={onCloudImport}
+                    placement="above"
+                  />
+                  <button
+                    type="button"
+                    onClick={onConvert}
+                    disabled={!canConvert || isConverting}
+                    className="btn-primary gap-2 px-5 py-2.5 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    {isConverting ? (
+                      <Spinner />
+                    ) : (
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                    )}
+                    {convertLabel}
+                  </button>
+                </div>
+              </div>
+              <p className="mt-2 text-center text-xs text-[rgb(var(--muted))] sm:text-left">{t("filesRemovedNote")}</p>
+            </>
+          )}
         </div>
       ) : null}
       </section>

@@ -165,7 +165,11 @@ export type TranslationKey =
   | "dashLoading"
   | "freeUsageRemaining"
   | "freeUsageLimitReached"
-  | "freeUsageUpgrade";
+  | "freeUsageUpgrade"
+  | "usageLimitTitle"
+  | "usageLimitDaily"
+  | "usageLimitNoCredits"
+  | "buyCredits";
 
 type Dict = Record<TranslationKey, string>;
 
@@ -340,6 +344,11 @@ const en: Dict = {
   freeUsageRemaining: "{remaining} of {limit} free conversions left today",
   freeUsageLimitReached: "Daily limit reached (15 conversions). Resets at midnight UTC.",
   freeUsageUpgrade: "View paid plans",
+  usageLimitTitle: "Conversion credits exceeded",
+  usageLimitDaily:
+    "Your daily limit of {limit} conversion credits exceeded. You can buy credits to continue using this service.",
+  usageLimitNoCredits: "You have no conversion credits left. Buy a package to continue using this service.",
+  buyCredits: "Buy credits",
 };
 
 const es: Dict = {

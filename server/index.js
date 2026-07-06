@@ -246,7 +246,7 @@ app.post(
     try {
       assertWithinDailyLimit(req, res);
     } catch (err) {
-      if (err.code === "DAILY_LIMIT") {
+      if (err.code === "DAILY_LIMIT" || err.code === "NO_CREDITS") {
         return res.status(429).json({ error: err.message, code: err.code, usage: err.usage });
       }
       return sendError(res, err);

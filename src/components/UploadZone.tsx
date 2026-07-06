@@ -9,6 +9,8 @@ import AddFilesMenu, { type CloudProvider } from "./AddFilesMenu";
 import CloudSetupModal from "./CloudSetupModal";
 import SelectDropdown from "./SelectDropdown";
 import ConversionPreviewModal from "./ConversionPreviewModal";
+import UsageLimitBanner from "./UsageLimitBanner";
+import { useUsageSnapshot } from "../hooks/useUsageSnapshot";
 import {
   type ConversionResultInfo,
   downloadConversionResult,
@@ -54,6 +56,8 @@ export default function UploadZone({
   overlapHero,
 }: UploadZoneProps) {
   const { t } = useI18n();
+  const { usage, refresh: refreshUsage, isBlocked, blockVariant, limit, applyUsageResponse } =
+    useUsageSnapshot();
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
   const [outputFormat, setOutputFormat] = useState<string | null>(
@@ -154,6 +158,7 @@ export default function UploadZone({
 
   const convert = async () => {
     if (!selectedFiles.length) return;
+    if (isBlocked) return;
     if (operation === "convert" && !effectiveTo) {
       onError("Please select output format");
       return;
@@ -227,6 +232,9 @@ export default function UploadZone({
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({ error: "Conversion failed" }));
+        if (res.status === 429 && (data.code === "DAILY_LIMIT" || data.code === "NO_CREDITS")) {
+          applyUsageResponse(data.usage, data.code);
+        }
         throw new Error(data.error || "Conversion failed");
       }
       const blob = await res.blob();
@@ -245,6 +253,7 @@ export default function UploadZone({
         outputFormat: outFmt,
       });
       onStatusChange("done");
+      refreshUsage();
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") {
         onError(
@@ -361,6 +370,9 @@ export default function UploadZone({
           onTranslateToChange={setTranslateTo}
           translateProgress={translateProgress}
           ocrProgress={ocrProgress}
+          usageBlocked={isBlocked}
+          usageBlockVariant={blockVariant}
+          usageLimit={limit}
         />
         {conversionResult ? (
           <ConversionPreviewModal
@@ -419,6 +431,12 @@ export default function UploadZone({
         </div>
 
         <div className="flex flex-col items-center gap-4">
+          {isBlocked ? (
+            <div className="w-full max-w-lg">
+              <UsageLimitBanner variant={blockVariant} limit={limit} />
+            </div>
+          ) : (
+            <>
           <AddFilesMenu
             onAddFiles={() => inputRef.current?.click()}
             onAddUrl={() => setShowUrl(true)}
@@ -516,11 +534,21 @@ export default function UploadZone({
             </div>
           )}
 
-          {error && (
+          {error && !isBlocked && (
             <p className="max-w-md rounded-lg bg-red-500/10 px-4 py-2 text-sm text-red-600 dark:text-red-400">
               {error}
             </p>
           )}
+            </>
+          )}
+
+          {!isBlocked && usage && usage.remaining > 0 && usage.plan === "free" ? (
+            <p className="text-xs text-[rgb(var(--muted))]">
+              {t("freeUsageRemaining")
+                .replace("{remaining}", String(usage.remaining))
+                .replace("{limit}", String(usage.limit))}
+            </p>
+          ) : null}
         </div>
       </div>
     </section>
