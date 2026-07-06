@@ -169,7 +169,9 @@ export type TranslationKey =
   | "usageLimitTitle"
   | "usageLimitDaily"
   | "usageLimitNoCredits"
-  | "buyCredits";
+  | "buyCredits"
+  | "usageJobFiles"
+  | "usageBatchTooLarge";
 
 type Dict = Record<TranslationKey, string>;
 
@@ -349,6 +351,9 @@ const en: Dict = {
     "Your daily limit of {limit} conversion credits exceeded. You can buy credits to continue using this service.",
   usageLimitNoCredits: "You have no conversion credits left. Buy a package to continue using this service.",
   buyCredits: "Buy credits",
+  usageJobFiles: "This job uses {count} conversion credits.",
+  usageBatchTooLarge:
+    "This job converts {count} files but you only have {remaining} free conversions left today.",
 };
 
 const es: Dict = {

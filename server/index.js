@@ -21,7 +21,7 @@ import { setTranslateProgress,
 import { getOcrProgress } from "./ocrProgress.js";
 import { mountAuthRoutes, optionalAuth, requireAuth } from "./auth.js";
 import { recordUserActivity } from "./userActivity.js";
-import { assertWithinDailyLimit, getUsageSnapshot, recordSuccessfulJob, setUsageHeaders } from "./usageLimits.js";
+import { assertWithinDailyLimit, conversionJobCount, getUsageSnapshot, recordSuccessfulJob, setUsageHeaders } from "./usageLimits.js";
 import { saveContactMessage } from "./db.js";
 import { buildStatusSnapshot } from "./statusMonitor.js";
 import { billingConfigHandler, createCheckoutHandler, createCardCheckoutHandler, billingWebhookHandler, getOrderHandler, submitOrderHandler, adminFulfillHandler } from "./billing.js";
@@ -247,8 +247,12 @@ app.post(
     { name: "files", maxCount: 30 },
   ]),
   async (req, res) => {
+    const operationEarly = String(req.query.operation || req.body?.operation || "convert").toLowerCase();
+    const uploadFilesEarly = getUploadFiles(req);
+    const jobCount = conversionJobCount(operationEarly, uploadFilesEarly.length);
+
     try {
-      assertWithinDailyLimit(req, res);
+      assertWithinDailyLimit(req, res, jobCount);
     } catch (err) {
       if (err.code === "DAILY_LIMIT" || err.code === "NO_CREDITS") {
         return res.status(429).json({ error: err.message, code: err.code, usage: err.usage });
@@ -256,7 +260,7 @@ app.post(
       return sendError(res, err);
     }
 
-    const operation = String(req.query.operation || req.body?.operation || "convert").toLowerCase();
+    const operation = operationEarly;
     const fromFormat = String(req.body?.fromFormat || "").toLowerCase();
     const toFormat = String(req.body?.toFormat || "").toLowerCase();
     const quality = req.body?.quality ? Number(req.body.quality) : undefined;
@@ -267,7 +271,7 @@ app.post(
       operation === "ocr" ||
       Boolean(req.body?.ocrLang && operation !== "translate" && operation !== "merge");
 
-    const uploadFiles = getUploadFiles(req);
+    const uploadFiles = uploadFilesEarly;
     const resolvedFromFormat =
       fromFormat ||
       path.extname(uploadFiles[0]?.originalname || "")
@@ -290,6 +294,7 @@ app.post(
           baseName
         );
         logAndSendFile(req, res, result, {
+          jobCount,
           operation: "merge",
           fromFormat: "pdf",
           toFormat: "pdf",
@@ -312,6 +317,7 @@ app.post(
           req.body.baseName || "archive"
         );
         logAndSendFile(req, res, result, {
+          jobCount,
           operation: "create-archive",
           fromFormat: "zip",
           toFormat: "zip",
@@ -341,6 +347,7 @@ app.post(
           req.body.baseName || "converted"
         );
         logAndSendFile(req, res, result, {
+          jobCount,
           operation: "convert",
           fromFormat: "pdf",
           toFormat,
@@ -377,6 +384,7 @@ app.post(
           tmpDir,
         });
         logAndSendFile(req, res, result, {
+          jobCount,
           operation: loggedOperation,
           fromFormat: fmt,
           toFormat: toFormat || result.filename?.split(".").pop() || "",
@@ -387,6 +395,7 @@ app.post(
 
       const result = await processBatchFiles(uploadFiles, fileCtx, tmpDir);
       logAndSendFile(req, res, result, {
+        jobCount,
         operation,
         fromFormat: resolvedFromFormat,
         toFormat: toFormat || result.filename?.split(".").pop() || "",
@@ -558,6 +567,7 @@ function sendFile(res, result) {
 }
 
 function logAndSendFile(req, res, result, meta) {
+  const jobCount = meta?.jobCount ?? 1;
   if (meta) {
     if (req.user?.id) {
       recordUserActivity({
@@ -568,7 +578,7 @@ function logAndSendFile(req, res, result, meta) {
         fileName: meta.fileName,
       });
     }
-    recordSuccessfulJob(req, res);
+    recordSuccessfulJob(req, res, jobCount);
   }
   const snapshot = getUsageSnapshot(req, res);
   setUsageHeaders(res, snapshot);

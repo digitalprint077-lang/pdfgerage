@@ -51,6 +51,8 @@ interface FileJobWorkspaceProps {
   usageBlocked?: boolean;
   usageBlockVariant?: UsageBlockVariant;
   usageLimit?: number;
+  fileJobCount?: number;
+  usageRemaining?: number;
 }
 
 export default function FileJobWorkspace({
@@ -83,6 +85,8 @@ export default function FileJobWorkspace({
   usageBlocked = false,
   usageBlockVariant = "daily",
   usageLimit = 15,
+  fileJobCount = 1,
+  usageRemaining,
 }: FileJobWorkspaceProps) {
   const { t } = useI18n();
   const addInputRef = useRef<HTMLInputElement>(null);
@@ -391,6 +395,14 @@ export default function FileJobWorkspace({
                 </div>
               </div>
               <p className="mt-2 text-center text-xs text-[rgb(var(--muted))] sm:text-left">{t("filesRemovedNote")}</p>
+              {usageRemaining != null && usageRemaining > 0 ? (
+                <p className="mt-2 text-center text-xs text-[rgb(var(--muted))] sm:text-left">
+                  {t("usageJobFiles").replace("{count}", String(fileJobCount))}{" "}
+                  {t("freeUsageRemaining")
+                    .replace("{remaining}", String(usageRemaining))
+                    .replace("{limit}", String(usageLimit))}
+                </p>
+              ) : null}
             </>
           )}
         </div>

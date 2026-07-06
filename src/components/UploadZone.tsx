@@ -87,6 +87,10 @@ export default function UploadZone({
       : toFormat === "any"
         ? outputFormat
         : toFormat;
+  const fileJobCount =
+    operation === "merge" || operation === "create-archive" ? 1 : Math.max(1, selectedFiles.length);
+  const wouldExceedLimit = usage != null && usage.remaining < fileJobCount;
+  const showLimitBanner = isBlocked || wouldExceedLimit;
   const multiSelect = true;
 
   useEffect(() => {
@@ -158,7 +162,16 @@ export default function UploadZone({
 
   const convert = async () => {
     if (!selectedFiles.length) return;
-    if (isBlocked) return;
+    if (isBlocked || wouldExceedLimit) {
+      if (wouldExceedLimit && usage) {
+        onError(
+          t("usageBatchTooLarge")
+            .replace("{count}", String(fileJobCount))
+            .replace("{remaining}", String(usage.remaining))
+        );
+      }
+      return;
+    }
     if (operation === "convert" && !effectiveTo) {
       onError("Please select output format");
       return;
@@ -339,7 +352,7 @@ export default function UploadZone({
             </button>
           </div>
         )}
-        {isBlocked ? (
+        {showLimitBanner ? (
           <div className="mb-4">
             <UsageLimitBanner variant={blockVariant} limit={limit} />
           </div>
@@ -376,9 +389,11 @@ export default function UploadZone({
           onTranslateToChange={setTranslateTo}
           translateProgress={translateProgress}
           ocrProgress={ocrProgress}
-          usageBlocked={isBlocked}
+          usageBlocked={showLimitBanner}
           usageBlockVariant={blockVariant}
           usageLimit={limit}
+          fileJobCount={fileJobCount}
+          usageRemaining={usage?.remaining}
         />
         {conversionResult ? (
           <ConversionPreviewModal
@@ -439,6 +454,15 @@ export default function UploadZone({
         <div className="flex flex-col items-center gap-4">
           {isBlocked ? (
             <div className="w-full max-w-lg">
+              <UsageLimitBanner variant={blockVariant} limit={limit} />
+            </div>
+          ) : wouldExceedLimit && usage ? (
+            <div className="w-full max-w-lg space-y-3">
+              <p className="text-sm text-amber-600 dark:text-amber-400">
+                {t("usageBatchTooLarge")
+                  .replace("{count}", String(fileJobCount))
+                  .replace("{remaining}", String(usage.remaining))}
+              </p>
               <UsageLimitBanner variant={blockVariant} limit={limit} />
             </div>
           ) : (

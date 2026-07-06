@@ -54,12 +54,13 @@ function readDailyCount(trackingId) {
   );
 }
 
-function incrementDailyCount(trackingId) {
+function incrementDailyCount(trackingId, amount = 1) {
+  const count = Math.max(1, Math.floor(Number(amount) || 1));
   const day = todayKey();
   db.prepare(
-    `INSERT INTO visitor_usage_daily (visitor_id, day, count) VALUES (?, ?, 1)
-     ON CONFLICT(visitor_id, day) DO UPDATE SET count = count + 1`
-  ).run(trackingId, day);
+    `INSERT INTO visitor_usage_daily (visitor_id, day, count) VALUES (?, ?, ?)
+     ON CONFLICT(visitor_id, day) DO UPDATE SET count = count + ?`
+  ).run(trackingId, day, count, count);
 }
 
 export function getUserDailyUsage(userId) {
@@ -132,12 +133,24 @@ export function setUsageHeaders(res, snapshot) {
   res.setHeader("X-Usage-Plan", snapshot.plan || "free");
 }
 
-export function assertWithinDailyLimit(req, res) {
+export function conversionJobCount(operation, fileCount) {
+  const files = Math.max(0, Math.floor(Number(fileCount) || 0));
+  if (files === 0) return 1;
+  if (operation === "merge" || operation === "create-archive") return 1;
+  return files;
+}
+
+export function assertWithinDailyLimit(req, res, pendingJobs = 1) {
+  const jobs = Math.max(1, Math.floor(Number(pendingJobs) || 1));
   const snapshot = getUsageSnapshot(req, res);
 
   if (req.user?.id && snapshot.creditBalance > 0) {
-    if (snapshot.remaining <= 0) {
-      const err = new Error("You have no conversion credits left. Buy a package to continue.");
+    if (snapshot.remaining < jobs) {
+      const err = new Error(
+        snapshot.remaining <= 0
+          ? "You have no conversion credits left. Buy a package to continue."
+          : `This job converts ${jobs} file${jobs === 1 ? "" : "s"} but you only have ${snapshot.remaining} credit${snapshot.remaining === 1 ? "" : "s"} left.`
+      );
       err.code = "NO_CREDITS";
       err.status = 429;
       err.usage = snapshot;
@@ -155,24 +168,39 @@ export function assertWithinDailyLimit(req, res) {
     err.usage = snapshot;
     throw err;
   }
+
+  if (snapshot.used + jobs > snapshot.limit) {
+    const remaining = Math.max(0, snapshot.limit - snapshot.used);
+    const err = new Error(
+      remaining <= 0
+        ? `Daily limit reached (${FREE_DAILY_LIMIT} conversions per day on the Free plan). Buy a package or try again tomorrow.`
+        : `This job converts ${jobs} file${jobs === 1 ? "" : "s"} but you only have ${remaining} free conversion${remaining === 1 ? "" : "s"} left today. Remove extra files or buy credits.`
+    );
+    err.code = "DAILY_LIMIT";
+    err.status = 429;
+    err.usage = snapshot;
+    throw err;
+  }
+
   return snapshot;
 }
 
-export function recordVisitorUsage(req, res) {
+export function recordVisitorUsage(req, res, amount = 1) {
   if (req.user?.id) return;
   const cookieId = ensureVisitorId(req, res);
-  incrementDailyCount(cookieId);
-  incrementDailyCount(fingerprintTrackingId(req));
+  incrementDailyCount(cookieId, amount);
+  incrementDailyCount(fingerprintTrackingId(req), amount);
 }
 
-export function recordSuccessfulJob(req, res) {
+export function recordSuccessfulJob(req, res, amount = 1) {
+  const count = Math.max(1, Math.floor(Number(amount) || 1));
   if (req.user?.id) {
     if (getCreditBalance(req.user.id) > 0) {
-      consumeCredits(req.user.id, 1);
+      consumeCredits(req.user.id, count);
       return;
     }
-    incrementDailyCount(`user:${req.user.id}`);
+    incrementDailyCount(`user:${req.user.id}`, count);
     return;
   }
-  recordVisitorUsage(req, res);
+  recordVisitorUsage(req, res, count);
 }
