@@ -1,5 +1,6 @@
 import path from "path";
 import fs from "fs/promises";
+import os from "os";
 import { createWriteStream } from "fs";
 import { PDFDocument } from "pdf-lib";
 import pdfParse from "pdf-parse";
@@ -15,8 +16,12 @@ import { promisify } from "util";
 import { convertPdfToDocxEditable, convertDocxToDoc } from "./pdf2docx.js";
 import { renderPdfToPngPages, PDF_RENDER_SCALE, PDF_IMAGE_ENCODE, extractTextFromPdfBuffer } from "./pdfRender.js";
 import { isArchiveFormat, convertArchiveFormat } from "./archiveTools.js";
+import { libreOfficeConvertBuffer as libreOfficeCliConvert } from "./libreOffice.js";
+import { envInt, mapConcurrent } from "./perf.js";
 
 const libreConvert = promisify(libre.convert);
+const BATCH_CONCURRENCY = envInt("CONVERT_BATCH_CONCURRENCY", 3);
+const ZIP_LEVEL = envInt("ZIP_COMPRESSION_LEVEL", 1);
 
 const IMAGE_FORMATS = new Set([
   "3fr", "arw", "avif", "bmp", "cr2", "cr3", "crw", "dcr", "dng", "eps", "erf", "gif", "heic", "heif",
@@ -146,11 +151,11 @@ export async function convertFile({ buffer, originalName, fromFormat, toFormat, 
   }
 
   if (OFFICE_FORMATS.has(from) && OFFICE_FORMATS.has(to)) {
-    return libreOfficeConvert(buffer, baseName, `.${from}`, `.${to}`);
+    return libreOfficeConvert(buffer, baseName, `.${from}`, `.${to}`, tmpDir);
   }
 
   if (OFFICE_FORMATS.has(from) || OFFICE_FORMATS.has(to)) {
-    return libreOfficeConvert(buffer, baseName, `.${from}`, `.${to}`);
+    return libreOfficeConvert(buffer, baseName, `.${from}`, `.${to}`, tmpDir);
   }
 
   if (isArchiveFormat(from) && isArchiveFormat(to)) {
@@ -212,7 +217,7 @@ async function convertFromPdf(buffer, baseName, toFormat, tmpDir) {
   }
 
   if (PDF_TO_OFFICE.has(toFormat)) {
-    return libreOfficeConvert(buffer, baseName, ".pdf", `.${toFormat}`);
+    return libreOfficeConvert(buffer, baseName, ".pdf", `.${toFormat}`, tmpDir);
   }
 
   throw new Error(`PDF to ${toFormat.toUpperCase()} conversion is not available`);
@@ -256,7 +261,7 @@ async function convertToPdf(buffer, baseName, fromFormat, tmpDir) {
   }
 
   if (OFFICE_FORMATS.has(fromFormat)) {
-    return libreOfficeConvert(buffer, baseName, `.${fromFormat}`, ".pdf");
+    return libreOfficeConvert(buffer, baseName, `.${fromFormat}`, ".pdf", tmpDir);
   }
 
   throw new Error(`${fromFormat.toUpperCase()} to PDF conversion is not available`);
@@ -329,31 +334,10 @@ async function pdfToDoc(buffer, baseName, tmpDir) {
 async function pdfToDocx(buffer, baseName, tmpDir) {
   const pdfPath = path.join(tmpDir, "input.pdf");
   const docxPath = path.join(tmpDir, "output.docx");
-  const loDocxPath = path.join(tmpDir, "libre.docx");
   await fs.writeFile(pdfPath, buffer);
 
-  let duplicateLayers = 0;
-
   try {
-    const meta = await convertPdfToDocxEditable(pdfPath, docxPath);
-    duplicateLayers = meta.duplicateLayersRemoved || 0;
-
-    // Form-style PDFs with many duplicate text layers often look cleaner via LibreOffice
-    if (duplicateLayers >= 8) {
-      try {
-        const loResult = await libreOfficeConvert(buffer, baseName, ".pdf", ".docx");
-        await fs.writeFile(loDocxPath, loResult.buffer);
-        const pdf2docxSize = (await fs.stat(docxPath)).size;
-        const loSize = loResult.buffer.length;
-        // Prefer LibreOffice when it produces a substantially different (usually cleaner) result
-        if (loSize > pdf2docxSize * 0.5 && loSize < pdf2docxSize * 2.5) {
-          return loResult;
-        }
-      } catch {
-        /* keep pdf2docx result */
-      }
-    }
-
+    await convertPdfToDocxEditable(pdfPath, docxPath);
     const docxBuffer = await fs.readFile(docxPath);
     return {
       buffer: docxBuffer,
@@ -362,7 +346,7 @@ async function pdfToDocx(buffer, baseName, tmpDir) {
     };
   } catch (pdf2docxErr) {
     try {
-      return await libreOfficeConvert(buffer, baseName, ".pdf", ".docx");
+      return await libreOfficeConvert(buffer, baseName, ".pdf", ".docx", tmpDir);
     } catch {
       const hint =
         pdf2docxErr instanceof Error ? pdf2docxErr.message : "Conversion failed";
@@ -581,28 +565,29 @@ async function getPdfImagePageBuffers(buffer, format, tmpDir, workId = "default"
   await fs.writeFile(pdfPath, buffer);
 
   const pngPages = await renderPdfToPngPages(pdfPath, PDF_RENDER_SCALE);
-  const pages = [];
 
-  for (const page of pngPages) {
+  const pages = await mapConcurrent(pngPages, envInt("PDF_ENCODE_CONCURRENCY", 4), async (page) => {
     const image = sharp(page);
-    let imgBuffer;
     if (normalized === "jpeg") {
-      imgBuffer = await image.jpeg(PDF_IMAGE_ENCODE.jpeg).toBuffer();
-    } else if (normalized === "webp") {
-      imgBuffer = await image.webp(PDF_IMAGE_ENCODE.webp).toBuffer();
-    } else if (normalized === "png") {
-      imgBuffer = await image.png(PDF_IMAGE_ENCODE.png).toBuffer();
-    } else if (normalized === "avif") {
-      imgBuffer = await image.avif(PDF_IMAGE_ENCODE.avif).toBuffer();
-    } else if (normalized === "heic") {
-      imgBuffer = await image.heic(PDF_IMAGE_ENCODE.heic).toBuffer();
-    } else if (normalized === "tiff") {
-      imgBuffer = await image.tiff(PDF_IMAGE_ENCODE.tiff).toBuffer();
-    } else {
-      imgBuffer = await image.toFormat(normalized, { quality: 100 }).toBuffer();
+      return image.jpeg(PDF_IMAGE_ENCODE.jpeg).toBuffer();
     }
-    pages.push(imgBuffer);
-  }
+    if (normalized === "webp") {
+      return image.webp(PDF_IMAGE_ENCODE.webp).toBuffer();
+    }
+    if (normalized === "png") {
+      return image.png(PDF_IMAGE_ENCODE.png).toBuffer();
+    }
+    if (normalized === "avif") {
+      return image.avif(PDF_IMAGE_ENCODE.avif).toBuffer();
+    }
+    if (normalized === "heic") {
+      return image.heic(PDF_IMAGE_ENCODE.heic).toBuffer();
+    }
+    if (normalized === "tiff") {
+      return image.tiff(PDF_IMAGE_ENCODE.tiff).toBuffer();
+    }
+    return image.toFormat(normalized, { quality: 90 }).toBuffer();
+  });
 
   if (pages.length === 0) {
     throw new Error("PDF has no pages to convert");
@@ -640,7 +625,7 @@ function dedupeEntryNames(entries) {
 async function createZipFromNamedEntries(zipPath, entries) {
   await new Promise((resolve, reject) => {
     const output = createWriteStream(zipPath);
-    const archive = archiver("zip", { zlib: { level: 9 } });
+    const archive = archiver("zip", { zlib: { level: ZIP_LEVEL } });
 
     output.on("close", resolve);
     archive.on("error", reject);
@@ -688,23 +673,21 @@ export async function packBatchResults(entries, zipBaseName, tmpDir) {
 export async function batchPdfToImages(files, toFormat, tmpDir, zipBaseName = "converted") {
   const format = toFormat.toLowerCase();
   const ext = imageExtension(format);
-  let entries = [];
 
-  for (let i = 0; i < files.length; i++) {
-    const { buffer, originalName } = files[i];
+  const batchResults = await mapConcurrent(files, BATCH_CONCURRENCY, async (file, i) => {
+    const { buffer, originalName } = file;
     const baseName = path.basename(originalName, path.extname(originalName));
     const pages = await getPdfImagePageBuffers(buffer, format, tmpDir, `batch-${i}`);
-
     if (pages.length === 1) {
-      entries.push({ name: `${baseName}.${ext}`, buffer: pages[0] });
-    } else {
-      pages.forEach((pageBuf, pageIndex) => {
-        entries.push({ name: `${baseName}-page-${pageIndex + 1}.${ext}`, buffer: pageBuf });
-      });
+      return [{ name: `${baseName}.${ext}`, buffer: pages[0] }];
     }
-  }
+    return pages.map((pageBuf, pageIndex) => ({
+      name: `${baseName}-page-${pageIndex + 1}.${ext}`,
+      buffer: pageBuf,
+    }));
+  });
 
-  entries = dedupeEntryNames(entries);
+  let entries = dedupeEntryNames(batchResults.flat());
 
   if (entries.length === 1) {
     return {
@@ -752,7 +735,7 @@ async function createZip(zipPath, pages, baseName, format) {
 
   await new Promise((resolve, reject) => {
     const output = createWriteStream(zipPath);
-    const archive = archiver("zip", { zlib: { level: 9 } });
+    const archive = archiver("zip", { zlib: { level: ZIP_LEVEL } });
 
     output.on("close", resolve);
     archive.on("error", reject);
@@ -817,20 +800,35 @@ async function textToPdf(buffer, baseName) {
   });
 }
 
-async function libreOfficeConvert(buffer, baseName, fromExt, toExt) {
+async function libreOfficeConvert(buffer, baseName, fromExt, toExt, tmpDir) {
+  const outExt = toExt.replace(".", "");
+  const workDir = tmpDir || (await fs.mkdtemp(path.join(os.tmpdir(), "lo-")));
+  const ownedDir = !tmpDir;
+
   try {
-    const converted = await libreConvert(buffer, toExt, undefined);
-    const outExt = toExt.replace(".", "");
+    const converted = await libreOfficeCliConvert(buffer, baseName, fromExt, toExt, workDir);
     return {
       buffer: converted,
       filename: `${baseName}.${outExt}`,
       mimeType: MIME[outExt] || "application/octet-stream",
     };
   } catch {
-    const outExt = toExt.replace(".", "").toUpperCase();
-    const inExt = fromExt.replace(".", "").toUpperCase();
-    throw new Error(
-      `${inExt} to ${outExt} could not be converted. Try DOCX, PPTX, XLSX, PNG, or TXT.`
-    );
+    try {
+      const converted = await libreConvert(buffer, toExt, undefined);
+      return {
+        buffer: converted,
+        filename: `${baseName}.${outExt}`,
+        mimeType: MIME[outExt] || "application/octet-stream",
+      };
+    } catch {
+      const inExt = fromExt.replace(".", "").toUpperCase();
+      throw new Error(
+        `${inExt} to ${outExt.toUpperCase()} could not be converted. Try DOCX, PPTX, XLSX, PNG, or TXT.`
+      );
+    }
+  } finally {
+    if (ownedDir) {
+      await fs.rm(workDir, { recursive: true, force: true }).catch(() => {});
+    }
   }
 }

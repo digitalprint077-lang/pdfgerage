@@ -3,18 +3,20 @@ import path from "node:path";
 import { strict as invariant } from "node:assert";
 import Canvas from "canvas";
 import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
+import { envInt, mapConcurrent } from "./perf.js";
 
-/** Target resolution for PDF → image (72 PDF points per inch × scale). */
-export const PDF_RENDER_DPI = 360;
+/** Target resolution for PDF → image (72 PDF points per inch × scale). Default 200 DPI for speed. */
+export const PDF_RENDER_DPI = envInt("PDF_RENDER_DPI", 200);
 export const PDF_RENDER_SCALE = PDF_RENDER_DPI / 72;
+export const PDF_PAGE_CONCURRENCY = envInt("PDF_PAGE_CONCURRENCY", 4);
 
-/** Lossy encode settings applied after high-DPI PNG render. */
+/** Encode settings — tuned for speed with good visual quality. */
 export const PDF_IMAGE_ENCODE = {
-  jpeg: { quality: 98, mozjpeg: true, chromaSubsampling: "4:4:4" },
-  webp: { quality: 96, effort: 5 },
-  avif: { quality: 92, effort: 5 },
-  heic: { quality: 95 },
-  png: { compressionLevel: 3 },
+  jpeg: { quality: 88, mozjpeg: true, chromaSubsampling: "4:2:0" },
+  webp: { quality: 85, effort: 2 },
+  avif: { quality: 80, effort: 3 },
+  heic: { quality: 85 },
+  png: { compressionLevel: 2 },
   tiff: { compression: "lzw" },
 };
 
@@ -61,23 +63,27 @@ export async function renderPdfToPngPages(pdfPath, scale = PDF_RENDER_SCALE) {
 
   const pages = [];
 
-  for (let pageNumber = 1; pageNumber <= pdfDocument.numPages; pageNumber++) {
-    const page = await pdfDocument.getPage(pageNumber);
-    const viewport = page.getViewport({ scale });
-    const { canvas, context } = canvasFactory.create(viewport.width, viewport.height);
+  await mapConcurrent(
+    Array.from({ length: pdfDocument.numPages }, (_, i) => i + 1),
+    PDF_PAGE_CONCURRENCY,
+    async (pageNumber) => {
+      const page = await pdfDocument.getPage(pageNumber);
+      const viewport = page.getViewport({ scale });
+      const { canvas, context } = canvasFactory.create(viewport.width, viewport.height);
 
-    context.fillStyle = "#ffffff";
-    context.fillRect(0, 0, viewport.width, viewport.height);
+      context.fillStyle = "#ffffff";
+      context.fillRect(0, 0, viewport.width, viewport.height);
 
-    await page.render({
-      canvasContext: context,
-      viewport,
-      intent: "print",
-      annotationMode: AnnotationMode.ENABLE,
-    }).promise;
+      await page.render({
+        canvasContext: context,
+        viewport,
+        intent: "print",
+        annotationMode: AnnotationMode.ENABLE,
+      }).promise;
 
-    pages.push(canvas.toBuffer("image/png"));
-  }
+      pages[pageNumber - 1] = canvas.toBuffer("image/png");
+    }
+  );
 
   return pages;
 }

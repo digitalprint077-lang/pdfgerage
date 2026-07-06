@@ -1,8 +1,9 @@
 import sharp from "sharp";
+import { envBool } from "./perf.js";
 
-/** Target ~300 DPI equivalent for OCR (longest side). */
-const TARGET_MIN_PX = 2800;
-const MAX_PX = 4500;
+/** Target longest side for OCR preprocessing. Lower = faster. */
+const TARGET_MIN_PX = envBool("OCR_FAST", true) ? 2200 : 2800;
+const MAX_PX = envBool("OCR_FAST", true) ? 3600 : 4500;
 
 /**
  * Enhance scans/photos for OCR: grayscale, contrast, sharpen, upscale.

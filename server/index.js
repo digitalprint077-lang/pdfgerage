@@ -25,6 +25,9 @@ import { assertWithinDailyLimit, getUsageSnapshot, recordSuccessfulJob } from ".
 import { saveContactMessage } from "./db.js";
 import { buildStatusSnapshot } from "./statusMonitor.js";
 import { billingConfigHandler, createCheckoutHandler, createCardCheckoutHandler, billingWebhookHandler, getOrderHandler, submitOrderHandler, adminFulfillHandler } from "./billing.js";
+import { envInt, mapConcurrent } from "./perf.js";
+
+const BATCH_CONCURRENCY = envInt("CONVERT_BATCH_CONCURRENCY", 3);
 
 const SUPPORT_EMAIL = process.env.CONTACT_EMAIL || "support@pdfgerage.app";
 
@@ -481,11 +484,9 @@ async function processSingleFile(file, ctx) {
 }
 
 async function processBatchFiles(files, ctx, tmpDir) {
-  const outputs = [];
   const progressId = String(ctx.progressId || "").trim();
 
-  for (let i = 0; i < files.length; i++) {
-    const file = files[i];
+  const outputs = await mapConcurrent(files, BATCH_CONCURRENCY, async (file, i) => {
     const subDir = path.join(tmpDir, `item-${i}`);
     await fs.mkdir(subDir, { recursive: true });
 
@@ -504,8 +505,8 @@ async function processBatchFiles(files, ctx, tmpDir) {
       progressId: files.length === 1 ? progressId : undefined,
     };
     const { result } = await processSingleFile(file, perFileCtx);
-    outputs.push(result);
-  }
+    return result;
+  });
 
   if (progressId && files.length > 1) {
     clearTranslateProgress(progressId);

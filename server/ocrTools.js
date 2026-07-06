@@ -8,6 +8,7 @@ import { Document, Packer, Paragraph, TextRun } from "docx";
 import { pdf } from "pdf-to-img";
 import { resolvePythonCommand } from "./pdf2docx.js";
 import { preprocessForOcr, preprocessForOcrAggressive } from "./ocrPreprocess.js";
+import { envBool, envInt } from "./perf.js";
 
 const execFileAsync = promisify(execFile);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -18,7 +19,9 @@ const IMAGE_EXT = new Set([
   "jfif", "jpeg", "jpg", "mos", "mrw", "nef", "orf", "pef", "png", "ppm", "raf", "raw", "rw2", "tga",
   "tif", "tiff", "webp", "x3f",
 ]);
-const PDF_SCALE = 4;
+const PDF_SCALE = envInt("OCR_PDF_SCALE", 3);
+const OCR_FAST = envBool("OCR_FAST", true);
+const PSM_MODES = OCR_FAST ? ["6", "3"] : ["3", "6", "11"];
 
 const LANG_MAP = {
   eng: "eng",
@@ -39,8 +42,6 @@ const LANG_BOOST = {
   ara: "ara+eng",
   hin: "hin+eng",
 };
-
-const PSM_MODES = ["3", "6", "11"];
 
 let cachedTesseractExe = null;
 let tesseractChecked = false;
@@ -104,6 +105,7 @@ async function ocrWithSystemTesseract(imageBuffer, lang, tmpDir, tag) {
       const text = await fs.readFile(txtPath, "utf-8").catch(() => "");
       const s = scoreResult(text);
       if (s > best.score) best = { text: text.trim(), score: s };
+      if (OCR_FAST && s > 120) return best.text;
     } catch {
       /* try next psm */
     }
@@ -114,7 +116,9 @@ async function ocrWithSystemTesseract(imageBuffer, lang, tmpDir, tag) {
 
 async function ocrWithTesseractJs(imageBuffer, lang, worker) {
   const langs = resolveLang(lang);
-  const variants = [await preprocessForOcr(imageBuffer), await preprocessForOcrAggressive(imageBuffer)];
+  const variants = OCR_FAST
+    ? [await preprocessForOcr(imageBuffer)]
+    : [await preprocessForOcr(imageBuffer), await preprocessForOcrAggressive(imageBuffer)];
 
   let best = { text: "", score: 0 };
 
@@ -130,6 +134,7 @@ async function ocrWithTesseractJs(imageBuffer, lang, worker) {
         const text = (data.text || "").trim();
         const s = scoreResult(text, data.confidence || 0);
         if (s > best.score) best = { text, score: s };
+        if (OCR_FAST && s > 120) return best.text;
       } catch {
         /* next */
       }
@@ -150,18 +155,20 @@ async function ocrWithPython(inputPath, txtPath, lang) {
 }
 
 async function powerOcrImageBuffer(buffer, lang, tmpDir, tag, worker) {
-  const results = [];
-
   const sys = await ocrWithSystemTesseract(buffer, lang, tmpDir, `${tag}-sys`);
-  if (sys) results.push({ text: sys, score: scoreResult(sys) });
+  if (sys && sys.trim()) {
+    const sysScore = scoreResult(sys);
+    if (OCR_FAST && sysScore > 80) return sys;
+    if (!OCR_FAST) {
+      const js = await ocrWithTesseractJs(buffer, lang, worker);
+      if (js && scoreResult(js) > sysScore) return js;
+      return sys;
+    }
+  }
 
   const js = await ocrWithTesseractJs(buffer, lang, worker);
-  if (js) results.push({ text: js, score: scoreResult(js) });
-
-  if (!results.length) return "";
-
-  results.sort((a, b) => b.score - a.score);
-  return results[0].text;
+  if (js) return js;
+  return sys || "";
 }
 
 async function powerOcrPdfBuffer(buffer, tmpDir, lang, worker) {
