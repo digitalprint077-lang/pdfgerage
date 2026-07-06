@@ -264,7 +264,8 @@ export default function FileJobWorkspace({
 
       {/* Footer — pre-convert only */}
       {!isDone ? (
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[rgb(var(--border))] bg-[rgb(var(--card-hover)/0.5)] px-4 py-3 sm:px-5">
+        <div className="border-t border-[rgb(var(--border))] bg-[rgb(var(--card-hover)/0.5)] px-4 py-3 sm:px-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-2 text-sm">
             {needsFormat && (
               <svg className="h-4 w-4 shrink-0 text-[rgb(var(--muted))]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -299,6 +300,8 @@ export default function FileJobWorkspace({
               {convertLabel}
             </button>
           </div>
+          </div>
+          <p className="mt-2 text-center text-xs text-[rgb(var(--muted))] sm:text-left">{t("filesRemovedNote")}</p>
         </div>
       ) : null}
       </section>

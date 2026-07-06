@@ -4,7 +4,7 @@ export default function SecuritySection() {
   const { t } = useI18n();
   const items = [
     t("securityDesc"),
-    "Temporary files are deleted automatically after each conversion",
+    t("filesRemovedNote"),
     "Encrypted transfer from upload to download",
   ];
 

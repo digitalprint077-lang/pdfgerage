@@ -8,6 +8,7 @@ export type TranslationKey =
   | "pricing"
   | "selectFileTitle"
   | "selectFileHint"
+  | "filesRemovedNote"
   | "selectFile"
   | "selectFiles"
   | "fromUrl"
@@ -138,6 +139,7 @@ const en: Dict = {
   pricing: "Pricing",
   selectFileTitle: "Select your file here to get started",
   selectFileHint: "or drop your file here.",
+  filesRemovedNote: "All files are removed after conversion.",
   selectFile: "Select File",
   selectFiles: "Select Files",
   fromUrl: "From URL",
@@ -269,6 +271,7 @@ const es: Dict = {
   tools: "Herramientas",
   selectFileTitle: "Selecciona tu archivo para comenzar",
   selectFileHint: "o suelta tu archivo aquí.",
+  filesRemovedNote: "Todos los archivos se eliminan después de la conversión.",
   selectFile: "Seleccionar archivo",
   selectFiles: "Seleccionar archivos",
   fromUrl: "Desde URL",
@@ -300,6 +303,7 @@ const fr: Dict = {
   tools: "Outils",
   selectFileTitle: "Sélectionnez votre fichier pour commencer",
   selectFileHint: "ou déposez votre fichier ici.",
+  filesRemovedNote: "Tous les fichiers sont supprimés après la conversion.",
   selectFile: "Choisir un fichier",
   fromUrl: "Depuis URL",
   load: "Charger",
@@ -325,6 +329,7 @@ const de: Dict = {
   tools: "Werkzeuge",
   selectFileTitle: "Datei auswählen zum Starten",
   selectFileHint: "oder Datei hier ablegen.",
+  filesRemovedNote: "Alle Dateien werden nach der Konvertierung entfernt.",
   selectFile: "Datei wählen",
   fromUrl: "Von URL",
   load: "Laden",
@@ -350,6 +355,7 @@ const zh: Dict = {
   tools: "工具",
   selectFileTitle: "选择文件开始",
   selectFileHint: "或将文件拖放到此处。",
+  filesRemovedNote: "转换完成后所有文件将被删除。",
   selectFile: "选择文件",
   fromUrl: "从 URL",
   load: "加载",
@@ -375,6 +381,7 @@ const ar: Dict = {
   tools: "الأدوات",
   selectFileTitle: "اختر ملفك للبدء",
   selectFileHint: "أو أسقط ملفك هنا.",
+  filesRemovedNote: "تُزال جميع الملفات بعد التحويل.",
   selectFile: "اختر ملف",
   fromUrl: "من رابط",
   load: "تحميل",
@@ -400,6 +407,7 @@ const hi: Dict = {
   tools: "टूल्स",
   selectFileTitle: "शुरू करने के लिए फ़ाइल चुनें",
   selectFileHint: "या फ़ाइल यहाँ छोड़ें।",
+  filesRemovedNote: "रूपांतरण के बाद सभी फ़ाइलें हटा दी जाती हैं।",
   selectFile: "फ़ाइल चुनें",
   fromUrl: "URL से",
   load: "लोड",
@@ -425,6 +433,7 @@ const ur: Dict = {
   tools: "اوزار",
   selectFileTitle: "شروع کرنے کے لیے فائل منتخب کریں",
   selectFileHint: "یا فائل یہاں چھوڑیں۔",
+  filesRemovedNote: "تبدیلی کے بعد تمام فائلیں ہٹا دی جاتی ہیں۔",
   selectFile: "فائل منتخب کریں",
   fromUrl: "URL سے",
   load: "لوڈ",
@@ -450,6 +459,7 @@ const pt: Dict = {
   tools: "Ferramentas",
   selectFileTitle: "Selecione seu arquivo para começar",
   selectFileHint: "ou solte seu arquivo aqui.",
+  filesRemovedNote: "Todos os arquivos são removidos após a conversão.",
   selectFile: "Selecionar arquivo",
   fromUrl: "De URL",
   load: "Carregar",
@@ -475,6 +485,7 @@ const ja: Dict = {
   tools: "ツール",
   selectFileTitle: "ファイルを選択して開始",
   selectFileHint: "またはここにドロップ。",
+  filesRemovedNote: "変換後、すべてのファイルは削除されます。",
   selectFile: "ファイルを選択",
   fromUrl: "URLから",
   load: "読み込み",

@@ -367,6 +367,12 @@ export default function UploadZone({
           <div className="space-y-1">
             <h2 className="text-xl font-semibold tracking-tight sm:text-2xl">{t("selectFileTitle")}</h2>
             <p className="text-[rgb(var(--muted))]">{t("selectFileHint")}</p>
+            <p className="flex items-center justify-center gap-1.5 text-xs text-[rgb(var(--muted))]">
+              <svg className="h-3.5 w-3.5 shrink-0 text-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+              {t("filesRemovedNote")}
+            </p>
           </div>
         </div>
 
