@@ -12,6 +12,7 @@ import {
   OCR_FAST,
   getOcrPreprocessVariants,
   preprocessForOcr,
+  preprocessForWatermarkDocument,
 } from "./ocrPreprocess.js";
 import { getOcrLanguageAttempts, scoreOcrText, textFromTsv } from "./ocrQuality.js";
 import { setOcrProgress, clearOcrProgress } from "./ocrProgress.js";
@@ -118,7 +119,7 @@ async function ocrWithSystemTesseractOnBuffer(
   tesseractLang,
   tmpDir,
   tag,
-  { quick = false } = {}
+  { quick = false, watermark = false } = {}
 ) {
   const exe = await findSystemTesseract();
   if (!exe) return null;
@@ -126,6 +127,7 @@ async function ocrWithSystemTesseractOnBuffer(
   const scriptDoc = isScriptLang(tesseractLang);
   const variants = await getOcrPreprocessVariants(imageBuffer, quick, {
     includeAggressive: !scriptDoc,
+    watermark: watermark || (!scriptDoc && tesseractLang === "eng"),
   });
   const psms = quick ? QUICK_PSM : FULL_PSM;
   let best = { text: "", score: 0 };
@@ -209,10 +211,11 @@ async function createOcrWorker(ocrLang) {
   return worker;
 }
 
-async function ocrWithTesseractJs(imageBuffer, tesseractLang, worker, { quick = false } = {}) {
+async function ocrWithTesseractJs(imageBuffer, tesseractLang, worker, { quick = false, watermark = false } = {}) {
   const scriptDoc = isScriptLang(tesseractLang);
   const variants = await getOcrPreprocessVariants(imageBuffer, quick, {
     includeAggressive: !scriptDoc,
+    watermark: watermark || (!scriptDoc && tesseractLang === "eng"),
   });
   const psms = quick ? QUICK_PSM : FULL_PSM;
   let best = { text: "", score: 0 };
@@ -244,7 +247,12 @@ async function ocrWithPythonBuffer(imageBuffer, tesseractLang, tmpDir, tag) {
 
   const inputPath = path.join(tmpDir, `py-${tag}.png`);
   const txtPath = path.join(tmpDir, `py-${tag}.txt`);
-  await fs.writeFile(inputPath, await preprocessForOcr(imageBuffer));
+  await fs.mkdir(tmpDir, { recursive: true });
+  const prep =
+    !isScriptLang(tesseractLang) && tesseractLang === "eng"
+      ? await preprocessForWatermarkDocument(imageBuffer)
+      : await preprocessForOcr(imageBuffer);
+  await fs.writeFile(inputPath, prep);
 
   try {
     await withTimeout(
@@ -262,19 +270,72 @@ async function ocrWithPythonBuffer(imageBuffer, tesseractLang, tmpDir, tag) {
   }
 }
 
+async function ocrWatermarkFastPass(buffer, tesseractLang, tmpDir, tag, worker) {
+  if (tesseractLang !== "eng" && !tesseractLang.startsWith("eng+")) return null;
+
+  const prep = await preprocessForWatermarkDocument(buffer);
+  const candidates = [];
+
+  const exe = await findSystemTesseract();
+  if (exe) {
+    const imgPath = path.join(tmpDir, `wm-${tag}.png`);
+    const outBase = path.join(tmpDir, `wm-out-${tag}`);
+    await fs.writeFile(imgPath, prep);
+    for (const psm of ["4", "6"]) {
+      try {
+        await withTimeout(
+          execFileAsync(
+            exe,
+            [imgPath, outBase, "-l", "eng", "--oem", "1", "--psm", psm, "-c", "preserve_interword_spaces=1", "txt"],
+            { timeout: SYSTEM_TESSERACT_MS, maxBuffer: 30 * 1024 * 1024 }
+          ),
+          SYSTEM_TESSERACT_MS + 5000,
+          "Watermark OCR"
+        );
+        const text = await fs.readFile(`${outBase}.txt`, "utf-8").catch(() => "");
+        pushCandidate(candidates, text);
+      } catch {
+        /* next */
+      }
+    }
+  }
+
+  try {
+    await worker.setParameters({ tessedit_pageseg_mode: "4", preserve_interword_spaces: "1" });
+    const { data } = await withTimeout(worker.recognize(prep), TESSERACT_CALL_MS, "Watermark OCR");
+    pushCandidate(candidates, data.text, data.confidence || 0);
+  } catch {
+    /* ignore */
+  }
+
+  const best = pickBest(candidates);
+  return best || null;
+}
+
 async function powerOcrImageBuffer(buffer, ocrLang, tmpDir, tag, worker) {
   const langAttempts = getOcrLanguageAttempts(ocrLang);
   const candidates = [];
 
+  const wm = await ocrWatermarkFastPass(buffer, langAttempts[0], tmpDir, tag, worker);
+  if (wm) pushCandidate(candidates, wm);
+  if (bestScore(candidates) >= GOOD_SCORE) return pickBest(candidates);
+  for (const tLang of langAttempts.slice(0, ocrLang === "eng" ? 1 : 2)) {
+    const py = await ocrWithPythonBuffer(buffer, tLang, tmpDir, `${tag}-py-${tLang}`);
+    if (py) pushCandidate(candidates, py);
+    if (bestScore(candidates) >= GOOD_SCORE) return pickBest(candidates);
+  }
+
   for (const tLang of langAttempts) {
     const sysQuick = await ocrWithSystemTesseractOnBuffer(buffer, tLang, tmpDir, `${tag}-${tLang}-q`, {
       quick: true,
+      watermark: tLang === "eng",
     });
     if (sysQuick) pushCandidate(candidates, sysQuick);
     if (bestScore(candidates) >= GOOD_SCORE) break;
 
     const sysFull = await ocrWithSystemTesseractOnBuffer(buffer, tLang, tmpDir, `${tag}-${tLang}-f`, {
       quick: false,
+      watermark: tLang === "eng",
     });
     if (sysFull) pushCandidate(candidates, sysFull);
     if (bestScore(candidates) >= GOOD_SCORE) break;
@@ -282,15 +343,11 @@ async function powerOcrImageBuffer(buffer, ocrLang, tmpDir, tag, worker) {
 
   if (bestScore(candidates) < GOOD_SCORE) {
     const jsLang = langAttempts[0];
-    const js = await ocrWithTesseractJs(buffer, jsLang, worker, { quick: bestScore(candidates) >= 80 });
+    const js = await ocrWithTesseractJs(buffer, jsLang, worker, {
+      quick: bestScore(candidates) >= 80,
+      watermark: jsLang === "eng",
+    });
     if (js) pushCandidate(candidates, js);
-  }
-
-  if (bestScore(candidates) < 100) {
-    for (const tLang of langAttempts.slice(0, 2)) {
-      const py = await ocrWithPythonBuffer(buffer, tLang, tmpDir, `${tag}-${tLang}`);
-      if (py) pushCandidate(candidates, py);
-    }
   }
 
   return pickBest(candidates);

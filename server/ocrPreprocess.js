@@ -68,7 +68,38 @@ export async function preprocessForOcrAggressive(buffer) {
     .toBuffer();
 }
 
-export async function getOcrPreprocessVariants(buffer, quick = false, { includeAggressive = true } = {}) {
+/** For security watermarks (PTA permits, govt forms with guilloche background). */
+export async function preprocessForWatermarkDocument(buffer) {
+  const pipeline = await resizeForOcr(buffer);
+  return pipeline
+    .removeAlpha()
+    .toColourspace("b-w")
+    .linear(2.8, -160)
+    .median(1)
+    .threshold(150)
+    .png()
+    .toBuffer();
+}
+
+/** Alternate watermark pass — stronger dark-text isolation. */
+export async function preprocessForWatermarkCrush(buffer) {
+  const pipeline = await resizeForOcr(buffer);
+  return pipeline
+    .grayscale()
+    .linear(3.2, -200)
+    .normalise({ lower: 5, upper: 70 })
+    .threshold(155)
+    .png()
+    .toBuffer();
+}
+
+export async function getOcrPreprocessVariants(buffer, quick = false, { includeAggressive = true, watermark = false } = {}) {
+  if (watermark) {
+    const primary = await preprocessForWatermarkDocument(buffer);
+    if (quick || OCR_FAST) return [primary];
+    return [primary, await preprocessForWatermarkCrush(buffer), await preprocessForOcr(buffer)];
+  }
+
   const standard = await preprocessForOcr(buffer);
   if (quick || OCR_FAST) return [standard];
 

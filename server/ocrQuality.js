@@ -24,6 +24,12 @@ export function scoreOcrText(text, confidence = 0) {
   let score = letters * 2.5 + digits + realWords * 14 + titleWords * 6 + urduWords * 16;
   score += confidence * 1.5;
 
+  const lower = trimmed.toLowerCase();
+  for (const kw of ["transport", "permit", "vehicle", "registration", "route", "peshawar", "carrier", "attock"]) {
+    if (lower.includes(kw)) score += 30;
+  }
+  if (/khair|ullah|tad-\d+|hino/i.test(trimmed)) score += 50;
+
   if (realWords + urduWords < 3 && len > 80) score *= 0.4;
 
   return score;
@@ -66,7 +72,7 @@ export function getOcrLanguageAttempts(ocrLang) {
   const attempts = new Set();
 
   const map = {
-    eng: ["eng", "urd+eng"],
+    eng: ["eng"],
     urd: ["urd+eng", "urd"],
     ara: ["ara+eng", "ara"],
     hin: ["hin+eng", "hin"],
