@@ -20,6 +20,21 @@
   },
   "deploy": {
     "startCommand": "node server/index.js",
-    "aptPackages": ["tesseract-ocr", "libreoffice-core", "libreoffice-writer", "libreoffice-calc", "libreoffice-impress"]
+    "aptPackages": [
+      "tesseract-ocr",
+      "tesseract-ocr-ara",
+      "tesseract-ocr-chi-sim",
+      "tesseract-ocr-deu",
+      "tesseract-ocr-fra",
+      "tesseract-ocr-hin",
+      "tesseract-ocr-jpn",
+      "tesseract-ocr-por",
+      "tesseract-ocr-spa",
+      "tesseract-ocr-urd",
+      "libreoffice-core",
+      "libreoffice-writer",
+      "libreoffice-calc",
+      "libreoffice-impress"
+    ]
   }
 }

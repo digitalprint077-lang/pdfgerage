@@ -432,7 +432,7 @@ export default function UploadZone({
                 </label>
               </div>
               <p className="max-w-lg text-xs text-gray-500 dark:text-gray-400">
-                Power OCR: 300 DPI, image enhancement, multi-pass Tesseract. May take 30–90s on large PDFs.
+                High-accuracy OCR: up to 288 DPI, image enhancement, and multi-engine Tesseract. Large PDFs may take 1–3 minutes.
               </p>
             </div>
           )}

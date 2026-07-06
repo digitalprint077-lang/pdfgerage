@@ -14,6 +14,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgl1 libglib2.0-0 \
     libreoffice \
     tesseract-ocr \
+    tesseract-ocr-ara \
+    tesseract-ocr-chi-sim \
+    tesseract-ocr-deu \
+    tesseract-ocr-fra \
+    tesseract-ocr-hin \
+    tesseract-ocr-jpn \
+    tesseract-ocr-por \
+    tesseract-ocr-spa \
+    tesseract-ocr-urd \
     && rm -rf /var/lib/apt/lists/*
 
 COPY server/requirements.txt ./server/requirements.txt

@@ -17,10 +17,14 @@ try:
 except ImportError:
     HAS_CV2 = False
 
-TESS_CONFIG = r"--oem 1 --psm 3 -c preserve_interword_spaces=1"
-TESS_CONFIG_SPARSE = r"--oem 1 --psm 11 -c preserve_interword_spaces=1"
+TESS_CONFIGS = [
+    r"--oem 1 --psm 3 -c preserve_interword_spaces=1",
+    r"--oem 1 --psm 6 -c preserve_interword_spaces=1",
+    r"--oem 1 --psm 11 -c preserve_interword_spaces=1",
+    r"--oem 1 --psm 4 -c preserve_interword_spaces=1",
+]
 
-PDF_MATRIX = fitz.Matrix(4, 4)  # ~288 DPI
+PDF_MATRIX = fitz.Matrix(4.5, 4.5)  # ~324 DPI
 
 
 def _pil_to_cv(img: Image.Image) -> np.ndarray:
@@ -39,7 +43,7 @@ def preprocess_pil(img: Image.Image) -> Image.Image:
 
     w, h = img.size
     longest = max(w, h)
-    target = 2800
+    target = 3200
     if longest < target:
         scale = target / longest
         img = img.resize((int(w * scale), int(h * scale)), Image.Resampling.LANCZOS)
@@ -48,7 +52,7 @@ def preprocess_pil(img: Image.Image) -> Image.Image:
         cv = _pil_to_cv(img)
         gray = cv2.cvtColor(cv, cv2.COLOR_BGR2GRAY)
         gray = cv2.fastNlMeansDenoising(gray, None, 8, 7, 21)
-        gray = cv2.createCLAHE(clipLimit=2.2, tileGridSize=(8, 8)).apply(gray)
+        gray = cv2.createCLAHE(clipLimit=2.4, tileGridSize=(8, 8)).apply(gray)
         binary = cv2.adaptiveThreshold(
             gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 31, 12
         )
@@ -61,11 +65,26 @@ def preprocess_pil(img: Image.Image) -> Image.Image:
     return img.convert("RGB")
 
 
+def _score(text: str) -> float:
+    text = (text or "").strip()
+    if not text:
+        return 0.0
+    alnum = sum(1 for ch in text if ch.isalnum())
+    words = len(text.split())
+    return alnum * 2 + words * 8
+
+
 def _ocr_pil(img: Image.Image, lang: str) -> str:
     prep = preprocess_pil(img)
-    t1 = pytesseract.image_to_string(prep, lang=lang or "eng", config=TESS_CONFIG).strip()
-    t2 = pytesseract.image_to_string(prep, lang=lang or "eng", config=TESS_CONFIG_SPARSE).strip()
-    return t1 if len(t1) >= len(t2) else t2
+    best = ""
+    best_score = 0.0
+    for config in TESS_CONFIGS:
+        text = pytesseract.image_to_string(prep, lang=lang or "eng", config=config).strip()
+        s = _score(text)
+        if s > best_score:
+            best = text
+            best_score = s
+    return best
 
 
 def ocr_image_bytes(data: bytes, lang: str = "eng") -> str:
