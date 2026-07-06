@@ -4,6 +4,7 @@ import { fileURLToPath } from "url";
 import { execFile } from "child_process";
 import { promisify } from "util";
 import Tesseract from "tesseract.js";
+import pdfParse from "pdf-parse";
 import { Document, Packer, Paragraph, TextRun } from "docx";
 import { pdf } from "pdf-to-img";
 import { resolvePythonCommand } from "./pdf2docx.js";
@@ -12,6 +13,7 @@ import {
   getOcrPreprocessVariants,
   preprocessForOcr,
 } from "./ocrPreprocess.js";
+import { setOcrProgress, clearOcrProgress } from "./ocrProgress.js";
 import { envInt } from "./perf.js";
 
 const execFileAsync = promisify(execFile);
@@ -24,10 +26,13 @@ const IMAGE_EXT = new Set([
   "tif", "tiff", "webp", "x3f",
 ]);
 
-/** PDF render scale — 4 ≈ 288 DPI, 5 ≈ 360 DPI */
 const PDF_SCALE = envInt("OCR_PDF_SCALE", OCR_FAST ? 3 : 4);
-const PSM_MODES = OCR_FAST ? ["6", "3"] : ["3", "6", "11", "4"];
-const EARLY_EXIT_SCORE = OCR_FAST ? 120 : 999999;
+const QUICK_PSM = ["6", "3"];
+const FULL_PSM = OCR_FAST ? ["6", "3"] : ["3", "6", "11"];
+const GOOD_SCORE = OCR_FAST ? 80 : 100;
+const PYTHON_TIMEOUT_MS = 90_000;
+const TESSERACT_CALL_MS = 120_000;
+const SYSTEM_TESSERACT_MS = 90_000;
 
 const LANG_MAP = {
   eng: "eng",
@@ -48,7 +53,6 @@ const LANG_MAP = {
   pol: "pol",
 };
 
-/** Bilingual packs improve mixed documents (e.g. Urdu + English forms). */
 const LANG_BOOST = {
   urd: "urd+eng",
   ara: "ara+eng",
@@ -59,6 +63,15 @@ const LANG_BOOST = {
 
 let cachedTesseractExe = null;
 let tesseractChecked = false;
+
+function withTimeout(promise, ms, label) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      setTimeout(() => reject(new Error(`${label} timed out after ${Math.round(ms / 1000)}s`)), ms);
+    }),
+  ]);
+}
 
 async function findSystemTesseract() {
   if (tesseractChecked) return cachedTesseractExe;
@@ -103,11 +116,16 @@ function pickBest(candidates) {
   return ranked[0]?.text?.trim() || "";
 }
 
-async function ocrWithSystemTesseractOnBuffer(imageBuffer, lang, tmpDir, tag) {
+function bestScore(candidates) {
+  return candidates.reduce((max, c) => Math.max(max, c.score || 0), 0);
+}
+
+async function ocrWithSystemTesseractOnBuffer(imageBuffer, lang, tmpDir, tag, { quick = false } = {}) {
   const exe = await findSystemTesseract();
   if (!exe) return null;
 
-  const variants = await getOcrPreprocessVariants(imageBuffer);
+  const variants = await getOcrPreprocessVariants(imageBuffer, quick);
+  const psms = quick ? QUICK_PSM : FULL_PSM;
   const langs = resolveLang(lang);
   let best = { text: "", score: 0 };
 
@@ -117,18 +135,22 @@ async function ocrWithSystemTesseractOnBuffer(imageBuffer, lang, tmpDir, tag) {
     const outBase = path.join(tmpDir, `ocr-out-${tag}-v${vi}`);
     await fs.writeFile(imgPath, prep);
 
-    for (const psm of PSM_MODES) {
+    for (const psm of psms) {
       try {
-        await execFileAsync(
-          exe,
-          [imgPath, outBase, "-l", langs, "--oem", "1", "--psm", psm, "-c", "preserve_interword_spaces=1", "txt"],
-          { timeout: 180000, maxBuffer: 30 * 1024 * 1024 }
+        await withTimeout(
+          execFileAsync(
+            exe,
+            [imgPath, outBase, "-l", langs, "--oem", "1", "--psm", psm, "-c", "preserve_interword_spaces=1", "txt"],
+            { timeout: SYSTEM_TESSERACT_MS, maxBuffer: 30 * 1024 * 1024 }
+          ),
+          SYSTEM_TESSERACT_MS + 5000,
+          "System OCR"
         );
         const txtPath = `${outBase}.txt`;
         const text = await fs.readFile(txtPath, "utf-8").catch(() => "");
         const s = scoreResult(text);
         if (s > best.score) best = { text: text.trim(), score: s };
-        if (best.score >= EARLY_EXIT_SCORE) return best.text;
+        if (best.score >= GOOD_SCORE) return best.text;
       } catch {
         /* try next psm */
       }
@@ -157,22 +179,27 @@ async function createOcrWorker(ocrLang) {
   return worker;
 }
 
-async function ocrWithTesseractJs(imageBuffer, lang, worker) {
-  const variants = await getOcrPreprocessVariants(imageBuffer);
+async function ocrWithTesseractJs(imageBuffer, lang, worker, { quick = false } = {}) {
+  const variants = await getOcrPreprocessVariants(imageBuffer, quick);
+  const psms = quick ? QUICK_PSM : FULL_PSM;
   let best = { text: "", score: 0 };
 
   for (const buf of variants) {
-    for (const psm of PSM_MODES) {
+    for (const psm of psms) {
       try {
         await worker.setParameters({
           tessedit_pageseg_mode: psm,
           preserve_interword_spaces: "1",
         });
-        const { data } = await worker.recognize(buf);
+        const { data } = await withTimeout(
+          worker.recognize(buf),
+          TESSERACT_CALL_MS,
+          "Browser OCR"
+        );
         const text = (data.text || "").trim();
         const s = scoreResult(text, data.confidence || 0);
         if (s > best.score) best = { text, score: s };
-        if (best.score >= EARLY_EXIT_SCORE) return best.text;
+        if (best.score >= GOOD_SCORE) return best.text;
       } catch {
         /* next */
       }
@@ -191,10 +218,14 @@ async function ocrWithPythonBuffer(imageBuffer, lang, tmpDir, tag) {
   await fs.writeFile(inputPath, await preprocessForOcr(imageBuffer));
 
   try {
-    await execFileAsync(python.cmd, [...python.args, OCR_SCRIPT, inputPath, txtPath, resolveLang(lang)], {
-      timeout: 600000,
-      maxBuffer: 30 * 1024 * 1024,
-    });
+    await withTimeout(
+      execFileAsync(python.cmd, [...python.args, OCR_SCRIPT, inputPath, txtPath, resolveLang(lang)], {
+        timeout: PYTHON_TIMEOUT_MS,
+        maxBuffer: 30 * 1024 * 1024,
+      }),
+      PYTHON_TIMEOUT_MS + 5000,
+      "Python OCR"
+    );
     const text = await fs.readFile(txtPath, "utf-8");
     return text?.trim() || null;
   } catch {
@@ -205,17 +236,22 @@ async function ocrWithPythonBuffer(imageBuffer, lang, tmpDir, tag) {
 async function powerOcrImageBuffer(buffer, lang, tmpDir, tag, worker) {
   const candidates = [];
 
-  const sys = await ocrWithSystemTesseractOnBuffer(buffer, lang, tmpDir, `${tag}-sys`);
-  if (sys) candidates.push({ text: sys, score: scoreResult(sys) });
+  const sysQuick = await ocrWithSystemTesseractOnBuffer(buffer, lang, tmpDir, `${tag}-sys`, { quick: true });
+  if (sysQuick) candidates.push({ text: sysQuick, score: scoreResult(sysQuick) });
+  if (bestScore(candidates) >= GOOD_SCORE) return pickBest(candidates);
 
-  if (OCR_FAST && candidates[0]?.score >= 80) {
-    return candidates[0].text;
+  const sysFull = await ocrWithSystemTesseractOnBuffer(buffer, lang, tmpDir, `${tag}-sysf`, { quick: false });
+  if (sysFull) candidates.push({ text: sysFull, score: scoreResult(sysFull) });
+  if (bestScore(candidates) >= GOOD_SCORE) return pickBest(candidates);
+
+  const hasSystem = Boolean(await findSystemTesseract());
+  if (!hasSystem || bestScore(candidates) < GOOD_SCORE) {
+    const js = await ocrWithTesseractJs(buffer, lang, worker, { quick: bestScore(candidates) >= 50 });
+    if (js) candidates.push({ text: js, score: scoreResult(js) });
+    if (bestScore(candidates) >= GOOD_SCORE) return pickBest(candidates);
   }
 
-  const js = await ocrWithTesseractJs(buffer, lang, worker);
-  if (js) candidates.push({ text: js, score: scoreResult(js) });
-
-  if (!OCR_FAST || candidates.every((c) => c.score < 100)) {
+  if (bestScore(candidates) < 50) {
     const py = await ocrWithPythonBuffer(buffer, lang, tmpDir, tag);
     if (py) candidates.push({ text: py, score: scoreResult(py) });
   }
@@ -223,19 +259,45 @@ async function powerOcrImageBuffer(buffer, lang, tmpDir, tag, worker) {
   return pickBest(candidates);
 }
 
-async function powerOcrPdfBuffer(buffer, tmpDir, lang, worker) {
+async function countPdfPages(buffer) {
+  try {
+    const parsed = await pdfParse(buffer);
+    return parsed.numpages || 0;
+  } catch {
+    return 0;
+  }
+}
+
+async function powerOcrPdfBuffer(buffer, tmpDir, lang, worker, progressId) {
   const pdfPath = path.join(tmpDir, "ocr-input.pdf");
   await fs.writeFile(pdfPath, buffer);
+
+  const totalPages = await countPdfPages(buffer);
+  if (progressId) {
+    setOcrProgress(progressId, { phase: "ocr", done: 0, total: totalPages || 0 });
+  }
 
   const document = await pdf(pdfPath, { scale: PDF_SCALE });
   const parts = [];
   let pageNum = 1;
 
   for await (const page of document) {
+    if (progressId) {
+      setOcrProgress(progressId, {
+        phase: "ocr",
+        done: pageNum - 1,
+        total: totalPages || pageNum,
+      });
+    }
+
     const pageBuf = Buffer.isBuffer(page) ? page : Buffer.from(page);
     const text = await powerOcrImageBuffer(pageBuf, lang, tmpDir, `p${pageNum}`, worker);
     parts.push(`--- Page ${pageNum} ---\n${text}`);
     pageNum++;
+  }
+
+  if (progressId) {
+    setOcrProgress(progressId, { phase: "done", done: pageNum - 1, total: pageNum - 1 });
   }
 
   return parts.join("\n\n");
@@ -246,28 +308,44 @@ export async function isTesseractAvailable() {
   return Boolean(sys) || true;
 }
 
-export async function runOcr({ buffer, originalName, tmpDir, ocrLang = "eng", toFormat = "txt" }) {
+export async function runOcr({
+  buffer,
+  originalName,
+  tmpDir,
+  ocrLang = "eng",
+  toFormat = "txt",
+  progressId,
+}) {
   const baseName = path.basename(originalName, path.extname(originalName));
   const ext = (path.extname(originalName).slice(1).toLowerCase() || "pdf").replace("jpeg", "jpg");
+
+  if (progressId) {
+    setOcrProgress(progressId, { phase: "starting", done: 0, total: 0 });
+  }
 
   const worker = await createOcrWorker(ocrLang);
   let text = "";
 
   try {
     if (ext === "pdf") {
-      text = await powerOcrPdfBuffer(buffer, tmpDir, ocrLang, worker);
+      text = await powerOcrPdfBuffer(buffer, tmpDir, ocrLang, worker, progressId);
     } else if (IMAGE_EXT.has(ext)) {
+      if (progressId) setOcrProgress(progressId, { phase: "ocr", done: 0, total: 1 });
       text = await powerOcrImageBuffer(buffer, ocrLang, tmpDir, "img", worker);
+      if (progressId) setOcrProgress(progressId, { phase: "done", done: 1, total: 1 });
     } else {
       throw new Error(`OCR supports PDF and images (PNG, JPG, etc.) — not ${ext.toUpperCase()}`);
     }
   } finally {
     await worker.terminate().catch(() => {});
+    if (progressId) {
+      setTimeout(() => clearOcrProgress(progressId), 60_000);
+    }
   }
 
   if (!text.trim()) {
     throw new Error(
-      "OCR found no text. Use a sharper scan, pick the correct language, or install Tesseract with language packs: https://github.com/UB-Mannheim/tesseract/wiki"
+      "OCR found no text. Use a sharper scan, pick the correct language, or try a smaller file."
     );
   }
 

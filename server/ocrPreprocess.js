@@ -4,8 +4,8 @@ import { envBool } from "./perf.js";
 export const OCR_FAST = envBool("OCR_FAST", false);
 
 /** Target longest side for OCR preprocessing. Higher = sharper text, slower. */
-const TARGET_MIN_PX = OCR_FAST ? 2200 : 3200;
-const MAX_PX = OCR_FAST ? 3600 : 5000;
+const TARGET_MIN_PX = OCR_FAST ? 2200 : 3000;
+const MAX_PX = OCR_FAST ? 3600 : 4500;
 
 async function resizeForOcr(buffer) {
   const meta = await sharp(buffer).metadata();
@@ -58,28 +58,10 @@ export async function preprocessForOcrAggressive(buffer) {
     .toBuffer();
 }
 
-/** Softer pass for dense documents / photos with color noise */
-export async function preprocessForOcrSoft(buffer) {
-  const pipeline = await resizeForOcr(buffer);
-  return pipeline
-    .modulate({ saturation: 0.85 })
-    .grayscale()
-    .gamma(1.08)
-    .normalize()
-    .linear(1.08, -8)
-    .sharpen({ sigma: 1.1 })
-    .png()
-    .toBuffer();
-}
-
-/** All preprocessing variants to try (accuracy mode uses every pass). */
-export async function getOcrPreprocessVariants(buffer) {
+/** All preprocessing variants — quick mode uses one pass only. */
+export async function getOcrPreprocessVariants(buffer, quick = false) {
   const standard = await preprocessForOcr(buffer);
-  if (OCR_FAST) return [standard];
-
-  const [aggressive, soft] = await Promise.all([
-    preprocessForOcrAggressive(buffer),
-    preprocessForOcrSoft(buffer),
-  ]);
-  return [standard, aggressive, soft];
+  if (quick || OCR_FAST) return [standard];
+  const aggressive = await preprocessForOcrAggressive(buffer);
+  return [standard, aggressive];
 }

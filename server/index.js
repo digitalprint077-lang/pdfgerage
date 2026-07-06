@@ -14,11 +14,11 @@ import { createZipArchive, extractZip } from "./archiveTools.js";
 import { runOcr, isTesseractAvailable, isOcrInputFormat, getOcrEngineInfo } from "./ocrTools.js";
 import { translateFile, translateText, TRANSLATE_LANGUAGES, OCR_LANGUAGES } from "./translateTools.js";
 import { getTranslateProviderStatus } from "./translateProviders.js";
-import {
-  setTranslateProgress,
+import { setTranslateProgress,
   getTranslateProgress,
   clearTranslateProgress,
 } from "./translateProgress.js";
+import { getOcrProgress } from "./ocrProgress.js";
 import { mountAuthRoutes, optionalAuth, requireAuth } from "./auth.js";
 import { recordUserActivity } from "./userActivity.js";
 import { assertWithinDailyLimit, getUsageSnapshot, recordSuccessfulJob } from "./usageLimits.js";
@@ -147,6 +147,16 @@ app.get("/api/languages", (_req, res) => {
 
 app.get("/api/translate/progress/:id", (req, res) => {
   const progress = getTranslateProgress(req.params.id);
+  if (!progress) return res.status(404).json({ error: "Progress not found" });
+  res.json({
+    phase: progress.phase,
+    done: progress.done,
+    total: progress.total,
+  });
+});
+
+app.get("/api/ocr/progress/:id", (req, res) => {
+  const progress = getOcrProgress(req.params.id);
   if (!progress) return res.status(404).json({ error: "Progress not found" });
   res.json({
     phase: progress.phase,
@@ -443,6 +453,7 @@ async function processSingleFile(file, ctx) {
       tmpDir,
       ocrLang,
       toFormat: toFormat || "txt",
+      progressId,
     });
   } else if (operation === "translate") {
     if (progressId) {
@@ -474,6 +485,7 @@ async function processSingleFile(file, ctx) {
       tmpDir,
       ocrLang: ocrLang || "eng",
       toFormat,
+      progressId,
     });
   } else {
     if (!fromFormat || !toFormat) {

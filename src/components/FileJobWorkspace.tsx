@@ -37,6 +37,7 @@ interface FileJobWorkspaceProps {
   onTranslateFromChange: (v: string) => void;
   onTranslateToChange: (v: string) => void;
   translateProgress?: { phase: string; done: number; total: number } | null;
+  ocrProgress?: { phase: string; done: number; total: number } | null;
 }
 
 export default function FileJobWorkspace({
@@ -61,6 +62,7 @@ export default function FileJobWorkspace({
   onTranslateFromChange,
   onTranslateToChange,
   translateProgress,
+  ocrProgress,
 }: FileJobWorkspaceProps) {
   const { t } = useI18n();
   const addInputRef = useRef<HTMLInputElement>(null);
@@ -250,6 +252,28 @@ export default function FileJobWorkspace({
                       className="h-full rounded-full bg-brand transition-all duration-300"
                       style={{
                         width: `${Math.max(4, (translateProgress.done / translateProgress.total) * 100)}%`,
+                      }}
+                    />
+                  </div>
+                )}
+              </>
+            ) : operation === "ocr" && ocrProgress ? (
+              <>
+                <p className="text-center text-sm">
+                  {ocrProgress.phase === "starting"
+                    ? "Preparing OCR…"
+                    : ocrProgress.total > 0
+                      ? `Reading pages… ${Math.min(ocrProgress.done + 1, ocrProgress.total)} / ${ocrProgress.total}`
+                      : ocrProgress.done > 0
+                        ? `Reading page ${ocrProgress.done + 1}…`
+                        : t("working")}
+                </p>
+                {ocrProgress.total > 0 && (
+                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-[rgb(var(--border)/0.5)]">
+                    <div
+                      className="h-full rounded-full bg-brand transition-all duration-300"
+                      style={{
+                        width: `${Math.max(4, (ocrProgress.done / ocrProgress.total) * 100)}%`,
                       }}
                     />
                   </div>

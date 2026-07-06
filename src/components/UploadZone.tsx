@@ -66,6 +66,11 @@ export default function UploadZone({
     done: number;
     total: number;
   } | null>(null);
+  const [ocrProgress, setOcrProgress] = useState<{
+    phase: string;
+    done: number;
+    total: number;
+  } | null>(null);
   const [cloudSetup, setCloudSetup] = useState<CloudProvider | null>(null);
   const [conversionResult, setConversionResult] = useState<ConversionResultInfo | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -152,9 +157,13 @@ export default function UploadZone({
     setConversionResult(null);
     setPreviewOpen(false);
 
-    const progressId = operation === "translate" ? crypto.randomUUID() : null;
-    if (progressId) {
+    const progressId =
+      operation === "translate" || operation === "ocr" ? crypto.randomUUID() : null;
+    if (progressId && operation === "translate") {
       setTranslateProgress({ phase: "extracting", done: 0, total: 0 });
+    }
+    if (progressId && operation === "ocr") {
+      setOcrProgress({ phase: "starting", done: 0, total: 0 });
     }
 
     const formData = new FormData();
@@ -176,27 +185,39 @@ export default function UploadZone({
       if (operation === "translate") {
         formData.append("translateFrom", translateFrom);
         formData.append("translateTo", translateTo);
-        if (progressId) formData.append("progressId", progressId);
       }
+      if (progressId) formData.append("progressId", progressId);
     }
 
     let pollTimer: ReturnType<typeof setInterval> | null = null;
     if (progressId) {
+      const progressUrl =
+        operation === "ocr"
+          ? `/api/ocr/progress/${progressId}`
+          : `/api/translate/progress/${progressId}`;
       pollTimer = setInterval(async () => {
         try {
-          const pr = await fetch(apiUrl(`/api/translate/progress/${progressId}`));
-          if (pr.ok) setTranslateProgress(await pr.json());
+          const pr = await fetch(apiUrl(progressUrl));
+          if (!pr.ok) return;
+          const data = await pr.json();
+          if (operation === "ocr") setOcrProgress(data);
+          else setTranslateProgress(data);
         } catch {
           /* ignore poll errors */
         }
-      }, 400);
+      }, 500);
     }
+
+    const controller = new AbortController();
+    const timeoutMs = operation === "ocr" ? 10 * 60 * 1000 : 5 * 60 * 1000;
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
       const res = await fetch(apiUrl(`/api/convert?operation=${encodeURIComponent(operation)}`), {
         method: "POST",
         body: formData,
         credentials: "include",
+        signal: controller.signal,
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({ error: "Conversion failed" }));
@@ -219,11 +240,21 @@ export default function UploadZone({
       });
       onStatusChange("done");
     } catch (err) {
-      onError(err instanceof Error ? err.message : "Conversion failed");
+      if (err instanceof DOMException && err.name === "AbortError") {
+        onError(
+          operation === "ocr"
+            ? "OCR timed out. Try a smaller file, fewer pages, or set OCR_FAST=true on the server."
+            : "Conversion timed out. Try a smaller file."
+        );
+      } else {
+        onError(err instanceof Error ? err.message : "Conversion failed");
+      }
       onStatusChange("error");
     } finally {
+      clearTimeout(timeoutId);
       if (pollTimer) clearInterval(pollTimer);
       setTranslateProgress(null);
+      setOcrProgress(null);
     }
   };
 
@@ -319,6 +350,7 @@ export default function UploadZone({
           onTranslateFromChange={setTranslateFrom}
           onTranslateToChange={setTranslateTo}
           translateProgress={translateProgress}
+          ocrProgress={ocrProgress}
         />
         {conversionResult ? (
           <ConversionPreviewModal
