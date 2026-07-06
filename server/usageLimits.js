@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import { getCreditBalance, getUserPlanSnapshot, consumeCredits } from "./credits.js";
 import db from "./db.js";
+import { sessionCookieOptions } from "./cookieOptions.js";
 
 export const FREE_DAILY_LIMIT = 15;
 export const FREE_MAX_FILE_MB = 100;
@@ -24,19 +25,41 @@ function getVisitorId(req) {
   return req.cookies?.[VISITOR_COOKIE] || null;
 }
 
+function clientFingerprint(req) {
+  const ip = String(req.headers["x-forwarded-for"] || req.ip || "unknown").split(",")[0].trim();
+  const ua = String(req.headers["user-agent"] || "unknown");
+  return crypto.createHash("sha256").update(`${ip}|${ua}`).digest("hex").slice(0, 32);
+}
+
+function fingerprintTrackingId(req) {
+  return `fp:${clientFingerprint(req)}`;
+}
+
 export function ensureVisitorId(req, res) {
   let id = getVisitorId(req);
   if (!id) {
     id = crypto.randomBytes(16).toString("hex");
     res.cookie(VISITOR_COOKIE, id, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.API_URL && process.env.FRONTEND_URL ? "none" : "lax",
+      ...sessionCookieOptions(),
       maxAge: 365 * 24 * 60 * 60 * 1000,
-      path: "/",
     });
   }
   return id;
+}
+
+function readDailyCount(trackingId) {
+  return (
+    db.prepare("SELECT count FROM visitor_usage_daily WHERE visitor_id = ? AND day = ?").get(trackingId, todayKey())
+      ?.count ?? 0
+  );
+}
+
+function incrementDailyCount(trackingId) {
+  const day = todayKey();
+  db.prepare(
+    `INSERT INTO visitor_usage_daily (visitor_id, day, count) VALUES (?, ?, 1)
+     ON CONFLICT(visitor_id, day) DO UPDATE SET count = count + 1`
+  ).run(trackingId, day);
 }
 
 export function getUserDailyUsage(userId) {
@@ -51,13 +74,16 @@ export function getUserDailyUsage(userId) {
   );
 }
 
-export function getVisitorDailyUsage(visitorId) {
-  if (!visitorId) return 0;
-  return (
-    db
-      .prepare("SELECT count FROM visitor_usage_daily WHERE visitor_id = ? AND day = ?")
-      .get(visitorId, todayKey())?.count ?? 0
-  );
+/** Anonymous usage: max of cookie visitor id and IP fingerprint (cookie bypass protection). */
+export function getAnonymousDailyUsage(req, res) {
+  const cookieId = getVisitorId(req);
+  const fpId = fingerprintTrackingId(req);
+  const cookieCount = cookieId ? readDailyCount(cookieId) : 0;
+  const fpCount = readDailyCount(fpId);
+  if (!cookieId) {
+    ensureVisitorId(req, res);
+  }
+  return Math.max(cookieCount, fpCount);
 }
 
 export function getDailyUsage(req, res) {
@@ -67,8 +93,7 @@ export function getDailyUsage(req, res) {
     }
     return getUserDailyUsage(req.user.id);
   }
-  const visitorId = ensureVisitorId(req, res);
-  return getVisitorDailyUsage(visitorId);
+  return getAnonymousDailyUsage(req, res);
 }
 
 export function getUsageSnapshot(req, res) {
@@ -96,6 +121,14 @@ export function getUsageSnapshot(req, res) {
     maxFileSizeMb: FREE_MAX_FILE_MB,
     creditBalance: 0,
   };
+}
+
+export function setUsageHeaders(res, snapshot) {
+  if (!snapshot) return;
+  res.setHeader("X-Usage-Used", String(snapshot.used));
+  res.setHeader("X-Usage-Limit", String(snapshot.limit));
+  res.setHeader("X-Usage-Remaining", String(snapshot.remaining));
+  res.setHeader("X-Usage-Plan", snapshot.plan || "free");
 }
 
 export function assertWithinDailyLimit(req, res) {
@@ -126,12 +159,9 @@ export function assertWithinDailyLimit(req, res) {
 
 export function recordVisitorUsage(req, res) {
   if (req.user?.id) return;
-  const visitorId = ensureVisitorId(req, res);
-  const day = todayKey();
-  db.prepare(
-    `INSERT INTO visitor_usage_daily (visitor_id, day, count) VALUES (?, ?, 1)
-     ON CONFLICT(visitor_id, day) DO UPDATE SET count = count + 1`
-  ).run(visitorId, day);
+  const cookieId = ensureVisitorId(req, res);
+  incrementDailyCount(cookieId);
+  incrementDailyCount(fingerprintTrackingId(req));
 }
 
 export function recordSuccessfulJob(req, res) {

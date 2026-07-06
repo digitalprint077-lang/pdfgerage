@@ -56,7 +56,7 @@ export default function UploadZone({
   overlapHero,
 }: UploadZoneProps) {
   const { t } = useI18n();
-  const { usage, refresh: refreshUsage, isBlocked, blockVariant, limit, applyUsageResponse } =
+  const { usage, refresh: refreshUsage, isBlocked, blockVariant, limit, applyUsageResponse, applyUsageFromResponse } =
     useUsageSnapshot();
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
@@ -237,6 +237,7 @@ export default function UploadZone({
         }
         throw new Error(data.error || "Conversion failed");
       }
+      applyUsageFromResponse(res);
       const blob = await res.blob();
       const disposition = res.headers.get("Content-Disposition") || "";
       const match = disposition.match(/filename="(.+)"/);

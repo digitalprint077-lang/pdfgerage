@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { createUser, findUserByEmail, findUserById, findOrCreateGoogleUser, updateUserName, updateUserPassword } from "./db.js";
 import { getUserDashboard } from "./userActivity.js";
+import { sessionCookieOptions } from "./cookieOptions.js";
 
 const JWT_SECRET = process.env.JWT_SECRET || "dev-change-me-in-production";
 const COOKIE_NAME = "auth_token";
@@ -66,14 +67,7 @@ function signToken(userId) {
 }
 
 function authCookieOptions(overrides = {}) {
-  const crossSite = Boolean(process.env.API_URL && process.env.FRONTEND_URL);
-  return {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: crossSite ? "none" : "lax",
-    path: "/",
-    ...overrides,
-  };
+  return sessionCookieOptions(overrides);
 }
 
 function setAuthCookie(res, token) {

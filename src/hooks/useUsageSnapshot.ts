@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { fetchUsage, type UsageSnapshot } from "../utils/usageApi";
+import { fetchUsage, parseUsageHeaders, type UsageSnapshot } from "../utils/usageApi";
 
 export type UsageBlockVariant = "daily" | "no_credits";
 
@@ -40,6 +40,15 @@ export function useUsageSnapshot() {
     }
   }, []);
 
+  const applyUsageFromResponse = useCallback((res: Response, code?: string) => {
+    const fromHeaders = parseUsageHeaders(res);
+    if (fromHeaders) {
+      setUsage(fromHeaders);
+      return;
+    }
+    applyUsageResponse(undefined, code);
+  }, [applyUsageResponse]);
+
   return {
     usage,
     refresh,
@@ -47,5 +56,6 @@ export function useUsageSnapshot() {
     blockVariant,
     limit: usage?.limit ?? 15,
     applyUsageResponse,
+    applyUsageFromResponse,
   };
 }

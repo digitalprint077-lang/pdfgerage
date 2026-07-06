@@ -21,7 +21,7 @@ import { setTranslateProgress,
 import { getOcrProgress } from "./ocrProgress.js";
 import { mountAuthRoutes, optionalAuth, requireAuth } from "./auth.js";
 import { recordUserActivity } from "./userActivity.js";
-import { assertWithinDailyLimit, getUsageSnapshot, recordSuccessfulJob } from "./usageLimits.js";
+import { assertWithinDailyLimit, getUsageSnapshot, recordSuccessfulJob, setUsageHeaders } from "./usageLimits.js";
 import { saveContactMessage } from "./db.js";
 import { buildStatusSnapshot } from "./statusMonitor.js";
 import { billingConfigHandler, createCheckoutHandler, createCardCheckoutHandler, billingWebhookHandler, getOrderHandler, submitOrderHandler, adminFulfillHandler } from "./billing.js";
@@ -91,6 +91,7 @@ app.use(
       callback(null, isAllowedCorsOrigin(origin));
     },
     credentials: true,
+    exposedHeaders: ["X-Usage-Used", "X-Usage-Limit", "X-Usage-Remaining", "X-Usage-Plan"],
   })
 );
 app.use(cookieParser());
@@ -232,7 +233,9 @@ app.get("/api/formats", (_req, res) => {
 });
 
 app.get("/api/usage", optionalAuth, (req, res) => {
-  res.json(getUsageSnapshot(req, res));
+  const snapshot = getUsageSnapshot(req, res);
+  setUsageHeaders(res, snapshot);
+  res.json(snapshot);
 });
 
 app.post(
@@ -563,10 +566,11 @@ function logAndSendFile(req, res, result, meta) {
         toFormat: meta.toFormat,
         fileName: meta.fileName,
       });
-    } else {
-      recordSuccessfulJob(req, res);
     }
+    recordSuccessfulJob(req, res);
   }
+  const snapshot = getUsageSnapshot(req, res);
+  setUsageHeaders(res, snapshot);
   sendFile(res, result);
 }
 
