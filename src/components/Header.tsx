@@ -13,13 +13,13 @@ interface HeaderProps {
 
 function Logo({ onDark }: { onDark?: boolean }) {
   return (
-    <Link to="/" className="group flex items-center gap-2.5">
-      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-brand shadow-glow-sm transition group-hover:scale-105">
-        <svg viewBox="0 0 24 24" className="h-5 w-5 text-white" fill="none" stroke="currentColor" strokeWidth="2">
+    <Link to="/" className="group flex min-w-0 shrink items-center gap-2 sm:gap-2.5">
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-brand shadow-glow-sm transition group-hover:scale-105 sm:h-9 sm:w-9">
+        <svg viewBox="0 0 24 24" className="h-4 w-4 text-white sm:h-5 sm:w-5" fill="none" stroke="currentColor" strokeWidth="2">
           <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
         </svg>
       </div>
-      <span className={`hero-logo-text text-lg font-bold tracking-tight ${onDark ? "text-white" : ""}`}>
+      <span className={`hero-logo-text whitespace-nowrap text-base font-bold tracking-tight sm:text-lg ${onDark ? "text-white" : ""}`}>
         PDF <span className="text-gradient">Gerage</span>
       </span>
     </Link>
@@ -46,7 +46,7 @@ export default function Header({ heroBand = false }: HeaderProps) {
 
   return (
     <header className={showHeroNav ? "glass-nav glass-nav-hero" : "glass-nav"}>
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3.5">
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 py-2.5 sm:gap-3 sm:py-3.5">
         <Logo onDark={showHeroNav} />
 
         <nav className="hidden items-center gap-1 md:flex">
@@ -84,38 +84,38 @@ export default function Header({ heroBand = false }: HeaderProps) {
           </Link>
         </nav>
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
           {!loading && (
             <>
               {user ? (
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-0.5 sm:gap-1">
                   <Link to="/profile" className="btn-ghost hidden max-w-[120px] truncate sm:inline-flex" title={user.email}>
                     {user.name || user.email.split("@")[0]}
                   </Link>
                   <Link to="/profile" className="btn-ghost hidden sm:inline-flex">
                     {t("profile")}
                   </Link>
-                  <button type="button" onClick={handleLogout} className="btn-ghost">
+                  <button type="button" onClick={handleLogout} className="btn-ghost !px-2.5 !py-1.5 text-xs sm:!px-4 sm:!py-2 sm:text-sm">
                     {t("logout")}
                   </button>
                 </div>
               ) : (
-                <div className="flex items-center gap-2">
-                  <Link to="/login" className="btn-ghost">
+                <div className="flex items-center gap-1 sm:gap-2">
+                  <Link to="/login" className="btn-ghost !px-2.5 !py-1.5 text-xs sm:!px-4 sm:!py-2 sm:text-sm">
                     {t("login")}
                   </Link>
-                  <Link to="/signup" className="btn-primary !px-4 !py-2">
+                  <Link to="/signup" className="btn-primary !px-3 !py-1.5 text-xs sm:!px-4 sm:!py-2 sm:text-sm">
                     {t("signup")}
                   </Link>
                 </div>
               )}
             </>
           )}
-          <LanguageSwitcher />
+          <LanguageSwitcher compact />
           <button
             type="button"
             onClick={(e) => toggleDark(e)}
-            className="btn-ghost !p-2"
+            className="btn-ghost hidden !p-2 sm:inline-flex"
             aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
           >
             {darkMode ? (

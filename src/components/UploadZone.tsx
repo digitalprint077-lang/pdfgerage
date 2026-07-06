@@ -347,7 +347,7 @@ export default function UploadZone({
       onDragLeave={() => setDragOver(false)}
       onDrop={onDrop}
     >
-      <div className="relative flex flex-col items-center gap-6 px-6 py-8 text-center">
+      <div className="relative flex flex-col items-center gap-5 px-4 py-6 text-center sm:gap-6 sm:px-6 sm:py-8">
         <div className="flex flex-col items-center gap-6">
           <svg className="h-12 w-12 text-brand" viewBox="0 0 64 64" fill="none" aria-hidden>
             <path

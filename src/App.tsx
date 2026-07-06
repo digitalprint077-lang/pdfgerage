@@ -143,7 +143,7 @@ export default function App({ tool }: AppProps) {
         <>
           <div className="home-hero-stage pb-20 md:pb-28">
             <Header heroBand />
-            <div className="mx-auto w-full max-w-6xl px-4 pt-10">
+            <div className="mx-auto w-full max-w-6xl px-5 pt-8 sm:px-4 sm:pt-10">
               <ConverterHero
                 title={title}
                 subtitle={subtitle}
@@ -162,7 +162,7 @@ export default function App({ tool }: AppProps) {
           </div>
 
           <div className="home-body-stage">
-            <div className="mx-auto w-full max-w-6xl px-4 pb-16">
+            <div className="mx-auto w-full max-w-6xl px-5 pb-16 sm:px-4">
               <UploadZone
                 operation={operation}
                 fromFormat={fromFormat}

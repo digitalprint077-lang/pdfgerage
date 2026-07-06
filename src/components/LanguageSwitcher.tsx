@@ -12,7 +12,7 @@ const PANEL_PADDING = 12;
 const VIEWPORT_PAD = 8;
 const PANEL_WIDTH = 200;
 
-export default function LanguageSwitcher() {
+export default function LanguageSwitcher({ compact = false }: { compact?: boolean }) {
   const { locale, setLocale, currentLanguage } = useI18n();
   const menu = useHoverDropdown();
   const open = menu.open;
@@ -94,16 +94,20 @@ export default function LanguageSwitcher() {
         aria-label={`Language: ${currentLanguage.label}`}
         aria-expanded={open}
         aria-haspopup="listbox"
-        className={`flex items-center gap-2 rounded-xl border px-2 py-1.5 text-sm transition ${
+        className={`flex h-9 items-center gap-1.5 rounded-xl border px-2 py-1.5 text-sm transition sm:gap-2 ${
           open
             ? "border-brand/50 bg-brand/10"
             : "border-[rgb(var(--border))] hover:border-brand/40 hover:bg-[rgb(var(--card-hover))]"
         }`}
       >
-        <FlagIcon country={currentLanguage.country} className="h-3.5 w-[1.375rem]" />
-        <span className="max-w-[5.5rem] truncate text-xs sm:max-w-none sm:text-sm">
-          {currentLanguage.label}
-        </span>
+        <FlagIcon country={currentLanguage.country} className="h-3.5 w-[1.375rem] shrink-0" />
+        {!compact ? (
+          <span className="max-w-[5.5rem] truncate text-xs sm:max-w-none sm:text-sm">{currentLanguage.label}</span>
+        ) : (
+          <span className="hidden max-w-[5.5rem] truncate text-xs min-[420px]:inline sm:max-w-none sm:text-sm">
+            {currentLanguage.label}
+          </span>
+        )}
         <svg
           className={`h-3 w-3 shrink-0 opacity-60 transition ${open ? "rotate-180" : ""}`}
           fill="none"

@@ -71,7 +71,7 @@ function FormatCard({
       onClick={onClick}
       aria-label={ariaLabel}
       aria-expanded={open}
-      className={`group/card relative flex h-[6.75rem] w-24 cursor-pointer flex-col items-center justify-between rounded-xl border px-1.5 pb-1.5 pt-3 transition duration-200 ${
+      className={`group/card relative flex h-[5.25rem] w-[4.75rem] cursor-pointer flex-col items-center justify-between rounded-xl border px-1 pb-1 pt-2.5 transition duration-200 sm:h-[6.75rem] sm:w-24 sm:px-1.5 sm:pb-1.5 sm:pt-3 ${
         open
           ? "border-brand/50 bg-[rgb(var(--format-card-hover))] shadow-[0_0_24px_rgba(239,68,68,0.22)] dark:shadow-[0_0_24px_rgba(239,68,68,0.28)]"
           : "border-[rgb(var(--border))] bg-[rgb(var(--format-card))] shadow-soft hover:border-brand/25 hover:bg-[rgb(var(--format-card-hover))]"
@@ -145,23 +145,23 @@ function FormatSelector({
 
 function ConvertArrow({ onSwap }: { onSwap?: () => void }) {
   return (
-    <div className="relative mx-1 flex flex-col items-center gap-1.5">
+    <div className="relative mx-0.5 flex shrink-0 flex-col items-center gap-1 sm:mx-1 sm:gap-1.5">
       <div className="flex items-center">
-        <span className="convert-sync-line h-px w-5" aria-hidden />
+        <span className="convert-sync-line h-px w-3 sm:w-5" aria-hidden />
         <button
           type="button"
           aria-label="Swap input and output formats"
           onClick={onSwap}
-          className="group/op relative mx-0.5 flex size-10 shrink-0 items-center justify-center bg-transparent p-0"
+          className="group/op relative mx-0.5 flex size-8 shrink-0 items-center justify-center bg-transparent p-0 sm:size-10"
         >
           <span className="convert-sync-glow pointer-events-none absolute inset-0 rounded-full" aria-hidden />
-          <span className="convert-sync-circle relative flex size-10 items-center justify-center rounded-full border bg-[rgb(var(--sync-bg))]">
+          <span className="convert-sync-circle relative flex size-8 items-center justify-center rounded-full border bg-[rgb(var(--sync-bg))] sm:size-10">
             <span
-              className="convert-sync-ring pointer-events-none absolute inset-[3px] rounded-full border-2 border-transparent"
+              className="convert-sync-ring pointer-events-none absolute inset-[2px] rounded-full border-2 border-transparent sm:inset-[3px]"
               aria-hidden
             />
             <svg
-              className="relative z-[1] size-[18px] text-[rgb(var(--sync-icon))]"
+              className="relative z-[1] size-4 text-[rgb(var(--sync-icon))] sm:size-[18px]"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -175,9 +175,9 @@ function ConvertArrow({ onSwap }: { onSwap?: () => void }) {
             </svg>
           </span>
         </button>
-        <span className="convert-sync-line-reverse h-px w-5" aria-hidden />
+        <span className="convert-sync-line-reverse h-px w-3 sm:w-5" aria-hidden />
       </div>
-      <span className="text-[10px] font-semibold uppercase tracking-[0.25em] text-[rgb(var(--foreground))]">
+      <span className="text-[9px] font-semibold uppercase tracking-[0.2em] text-[rgb(var(--foreground))] sm:text-[10px] sm:tracking-[0.25em]">
         to
       </span>
     </div>
@@ -264,7 +264,7 @@ function FormatPickerRow({
   };
 
   return (
-    <div className="relative flex shrink-0 items-center gap-0">
+    <div className="relative flex w-full shrink-0 items-center justify-center gap-0 sm:w-auto sm:justify-start">
       <FormatSelector
         value={fromFormat}
         options={fromOptions}
@@ -311,20 +311,21 @@ export default function ConverterHero({
       </div>
 
       <div
-        className={`relative flex flex-col gap-8 ${hasFiles ? "mb-4" : "mb-8 lg:flex-row lg:items-start lg:justify-between"}`}
+        className={`relative flex flex-col gap-6 sm:gap-8 ${hasFiles ? "mb-4" : "mb-6 sm:mb-8 lg:flex-row lg:items-start lg:justify-between"}`}
       >
         {!hasFiles && (
           <div className="max-w-xl">
             {operation !== "convert" && <ToolBadge operation={operation} />}
-            <h1 className="mb-4 text-4xl font-bold tracking-tight md:text-5xl lg:text-6xl">
+            <h1 className="mb-3 text-3xl font-bold leading-[1.1] tracking-tight sm:mb-4 sm:text-4xl md:text-5xl lg:text-6xl">
               {title}
             </h1>
-            <p className="max-w-xl text-lg leading-relaxed text-[rgb(var(--muted))]">{subtitle}</p>
+            <p className="max-w-xl text-base leading-relaxed text-[rgb(var(--muted))] sm:text-lg">{subtitle}</p>
           </div>
         )}
 
         {!hideFormatPickers && !hasFiles && (
-          <FormatPickerRow
+          <div className="flex w-full justify-center lg:justify-end">
+            <FormatPickerRow
             fromFormat={fromFormat}
             toFormat={toFormat}
             operation={operation}
@@ -333,6 +334,7 @@ export default function ConverterHero({
             onPickerOpenChange={onPickerOpenChange}
             onFormatInteraction={onFormatInteraction}
           />
+          </div>
         )}
       </div>
 

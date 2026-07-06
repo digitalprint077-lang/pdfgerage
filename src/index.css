@@ -163,7 +163,7 @@
   }
 
   .home-upload-overlap {
-    @apply relative z-10 -mt-16 md:-mt-20;
+    @apply relative z-10 -mt-12 sm:-mt-16 md:-mt-20;
   }
 
   .modern-card {
