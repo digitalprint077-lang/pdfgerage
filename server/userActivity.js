@@ -1,3 +1,4 @@
+import { getUserPlanSnapshot } from "./credits.js";
 import db from "./db.js";
 import { FREE_DAILY_LIMIT, FREE_MAX_FILE_MB, getUserDailyUsage } from "./usageLimits.js";
 
@@ -97,6 +98,8 @@ export function getUserDashboard(userId, userEmail, userRow) {
     .all(userId)
     .map((r) => ({ operation: r.operation, count: r.count }));
 
+  const planSnapshot = getUserPlanSnapshot(userId);
+
   return {
     stats: {
       totalConversions,
@@ -107,11 +110,13 @@ export function getUserDashboard(userId, userEmail, userRow) {
       mergeJobs,
     },
     plan: {
-      name: "Free",
-      dailyLimit: FREE_DAILY_LIMIT,
-      usedToday,
-      remainingToday: Math.max(0, FREE_DAILY_LIMIT - usedToday),
-      maxFileSizeMb: FREE_MAX_FILE_MB,
+      name: planSnapshot.name,
+      id: planSnapshot.plan,
+      dailyLimit: planSnapshot.limit,
+      usedToday: planSnapshot.plan === "free" ? usedToday : 0,
+      remainingToday: planSnapshot.remaining,
+      maxFileSizeMb: planSnapshot.maxFileSizeMb,
+      creditBalance: planSnapshot.creditBalance,
     },
     recentActivity: recentRows.map(mapActivityRow),
     operationBreakdown,

@@ -35,8 +35,11 @@ export default function Header({ heroBand = false }: HeaderProps) {
   const toolsButtonRef = useRef<HTMLButtonElement>(null);
 
   const handleLogout = async () => {
-    await logout();
-    navigate("/");
+    try {
+      await logout();
+    } finally {
+      navigate("/");
+    }
   };
 
   const showHeroNav = heroBand && !darkMode;

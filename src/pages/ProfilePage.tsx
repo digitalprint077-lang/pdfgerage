@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import SitePageShell from "../components/SitePageShell";
 import RequireAuth from "../components/RequireAuth";
 import { useAuth } from "../contexts/AuthContext";
@@ -144,10 +144,12 @@ function ProfileDashboard() {
   const { t } = useI18n();
   const { user, logout, updateProfile } = useAuth();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [tab, setTab] = useState<Tab>("overview");
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
   const [dashLoading, setDashLoading] = useState(true);
   const [dashError, setDashError] = useState<string | null>(null);
+  const [purchaseNotice, setPurchaseNotice] = useState<string | null>(null);
 
   const [name, setName] = useState("");
   const [saving, setSaving] = useState(false);
@@ -170,6 +172,24 @@ function ProfileDashboard() {
   useEffect(() => {
     if (user) setName(user.name);
   }, [user]);
+
+  useEffect(() => {
+    const urlTab = searchParams.get("tab");
+    if (urlTab === "plan" || urlTab === "overview" || urlTab === "activity" || urlTab === "security") {
+      setTab(urlTab);
+    }
+    if (searchParams.get("purchase") === "success") {
+      setTab("plan");
+      setPurchaseNotice("Payment successful — your credits have been added to your account.");
+      setSearchParams({}, { replace: true });
+      fetchDashboard()
+        .then((data) => {
+          setDashboard(data);
+          setDashError(null);
+        })
+        .catch(() => {});
+    }
+  }, [searchParams, setSearchParams]);
 
   useEffect(() => {
     let cancelled = false;
@@ -235,8 +255,11 @@ function ProfileDashboard() {
   };
 
   const handleLogout = async () => {
-    await logout();
-    navigate("/");
+    try {
+      await logout();
+    } finally {
+      navigate("/");
+    }
   };
 
   return (
@@ -533,12 +556,21 @@ function ProfileDashboard() {
 
               {tab === "plan" && (
                 <div className="space-y-6">
+                  {purchaseNotice ? (
+                    <div className="rounded-xl border border-green-500/30 bg-green-500/10 px-4 py-3 text-sm text-green-700 dark:text-green-300">
+                      {purchaseNotice}
+                    </div>
+                  ) : null}
                   <section className="rounded-xl border border-brand/20 bg-brand/5 p-6">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                       <div>
                         <p className="text-xs font-medium uppercase tracking-wide text-brand">{t("dashCurrentPlan")}</p>
-                        <h2 className="mt-1 text-2xl font-bold">{t("dashFreePlan")}</h2>
-                        <p className="mt-2 text-sm text-[rgb(var(--muted))]">{t("dashPlanDesc")}</p>
+                        <h2 className="mt-1 text-2xl font-bold">{dashboard.plan.name}</h2>
+                        <p className="mt-2 text-sm text-[rgb(var(--muted))]">
+                          {dashboard.plan.creditBalance && dashboard.plan.creditBalance > 0
+                            ? `${dashboard.plan.creditBalance.toLocaleString()} conversion credits — never expire`
+                            : t("dashPlanDesc")}
+                        </p>
                       </div>
                       <Link
                         to="/pricing"
@@ -551,17 +583,37 @@ function ProfileDashboard() {
 
                   <div className="grid gap-6 lg:grid-cols-2">
                     <section className="modern-card p-6">
-                      <h3 className="mb-4 font-semibold">{t("dashUsageToday")}</h3>
-                      <UsageBar used={dashboard.plan.usedToday} limit={dashboard.plan.dailyLimit} />
+                      <h3 className="mb-4 font-semibold">
+                        {dashboard.plan.creditBalance && dashboard.plan.creditBalance > 0
+                          ? "Credit balance"
+                          : t("dashUsageToday")}
+                      </h3>
+                      {dashboard.plan.creditBalance && dashboard.plan.creditBalance > 0 ? (
+                        <p className="text-3xl font-bold tabular-nums text-brand">
+                          {dashboard.plan.creditBalance.toLocaleString()}
+                          <span className="ml-2 text-base font-normal text-[rgb(var(--muted))]">credits left</span>
+                        </p>
+                      ) : (
+                        <UsageBar used={dashboard.plan.usedToday} limit={dashboard.plan.dailyLimit} />
+                      )}
                       <ul className="mt-4 space-y-2 text-sm text-[rgb(var(--muted))]">
-                        <li className="flex justify-between">
-                          <span>{t("dashDailyLimit")}</span>
-                          <span className="text-[rgb(var(--foreground))]">{dashboard.plan.dailyLimit}</span>
-                        </li>
-                        <li className="flex justify-between">
-                          <span>{t("dashRemaining")}</span>
-                          <span className="text-[rgb(var(--foreground))]">{dashboard.plan.remainingToday}</span>
-                        </li>
+                        {dashboard.plan.creditBalance && dashboard.plan.creditBalance > 0 ? (
+                          <li className="flex justify-between">
+                            <span>Plan type</span>
+                            <span className="text-[rgb(var(--foreground))]">Package</span>
+                          </li>
+                        ) : (
+                          <>
+                            <li className="flex justify-between">
+                              <span>{t("dashDailyLimit")}</span>
+                              <span className="text-[rgb(var(--foreground))]">{dashboard.plan.dailyLimit}</span>
+                            </li>
+                            <li className="flex justify-between">
+                              <span>{t("dashRemaining")}</span>
+                              <span className="text-[rgb(var(--foreground))]">{dashboard.plan.remainingToday}</span>
+                            </li>
+                          </>
+                        )}
                         <li className="flex justify-between">
                           <span>{t("dashMaxFileSize")}</span>
                           <span className="text-[rgb(var(--foreground))]">{dashboard.plan.maxFileSizeMb} MB</span>

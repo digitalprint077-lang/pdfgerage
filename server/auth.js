@@ -65,19 +65,26 @@ function signToken(userId) {
   return jwt.sign({ sub: userId }, JWT_SECRET, { expiresIn: "7d" });
 }
 
-function setAuthCookie(res, token) {
+function authCookieOptions(overrides = {}) {
   const crossSite = Boolean(process.env.API_URL && process.env.FRONTEND_URL);
-  res.cookie(COOKIE_NAME, token, {
+  return {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: crossSite ? "none" : "lax",
-    maxAge: TOKEN_MAX_AGE_MS,
     path: "/",
+    ...overrides,
+  };
+}
+
+function setAuthCookie(res, token) {
+  res.cookie(COOKIE_NAME, token, {
+    ...authCookieOptions(),
+    maxAge: TOKEN_MAX_AGE_MS,
   });
 }
 
 export function clearAuthCookie(res) {
-  res.clearCookie(COOKIE_NAME, { path: "/" });
+  res.clearCookie(COOKIE_NAME, authCookieOptions());
 }
 
 export function requireAuth(req, res, next) {
@@ -257,13 +264,7 @@ export function googleStartHandler(req, res) {
     : "/";
 
   const state = crypto.randomBytes(24).toString("hex");
-  const oauthCookie = {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: process.env.API_URL && process.env.FRONTEND_URL ? "none" : "lax",
-    maxAge: 10 * 60 * 1000,
-    path: "/",
-  };
+  const oauthCookie = authCookieOptions({ maxAge: 10 * 60 * 1000 });
 
   res.cookie(OAUTH_STATE_COOKIE, state, oauthCookie);
   res.cookie(OAUTH_RETURN_COOKIE, returnTo, oauthCookie);
@@ -287,9 +288,10 @@ export async function googleCallbackHandler(req, res) {
   const authPage = req.cookies?.[OAUTH_AUTH_PAGE_COOKIE] === "signup" ? "signup" : "login";
 
   const redirectAuthError = (code) => {
-    res.clearCookie(OAUTH_STATE_COOKIE, { path: "/" });
-    res.clearCookie(OAUTH_RETURN_COOKIE, { path: "/" });
-    res.clearCookie(OAUTH_AUTH_PAGE_COOKIE, { path: "/" });
+    const oauthClear = authCookieOptions();
+    res.clearCookie(OAUTH_STATE_COOKIE, oauthClear);
+    res.clearCookie(OAUTH_RETURN_COOKIE, oauthClear);
+    res.clearCookie(OAUTH_AUTH_PAGE_COOKIE, oauthClear);
     return res.redirect(`${frontendUrl}/${authPage}?error=${code}`);
   };
 
@@ -308,9 +310,10 @@ export async function googleCallbackHandler(req, res) {
       return redirectAuthError("invalid_state");
     }
 
-    res.clearCookie(OAUTH_STATE_COOKIE, { path: "/" });
-    res.clearCookie(OAUTH_RETURN_COOKIE, { path: "/" });
-    res.clearCookie(OAUTH_AUTH_PAGE_COOKIE, { path: "/" });
+    const oauthClear = authCookieOptions();
+    res.clearCookie(OAUTH_STATE_COOKIE, oauthClear);
+    res.clearCookie(OAUTH_RETURN_COOKIE, oauthClear);
+    res.clearCookie(OAUTH_AUTH_PAGE_COOKIE, oauthClear);
 
     const clientId = getGoogleClientId();
     const clientSecret = getGoogleClientSecret();

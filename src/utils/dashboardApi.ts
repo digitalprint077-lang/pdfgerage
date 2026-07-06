@@ -21,10 +21,12 @@ export interface DashboardData {
   };
   plan: {
     name: string;
+    id?: string;
     dailyLimit: number;
     usedToday: number;
     remainingToday: number;
     maxFileSizeMb: number;
+    creditBalance?: number;
   };
   recentActivity: DashboardActivity[];
   operationBreakdown: Array<{ operation: string; count: number }>;

@@ -88,8 +88,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(async () => {
-    await authFetch("/api/auth/logout", { method: "POST" });
-    setUser(null);
+    try {
+      await authFetch("/api/auth/logout", { method: "POST" });
+    } catch {
+      /* still clear local session if the network call fails */
+    } finally {
+      setUser(null);
+    }
   }, []);
 
   const updateProfile = useCallback(async (name: string) => {

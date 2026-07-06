@@ -19,11 +19,12 @@ import {
   getTranslateProgress,
   clearTranslateProgress,
 } from "./translateProgress.js";
-import { mountAuthRoutes, optionalAuth } from "./auth.js";
+import { mountAuthRoutes, optionalAuth, requireAuth } from "./auth.js";
 import { recordUserActivity } from "./userActivity.js";
 import { assertWithinDailyLimit, getUsageSnapshot, recordSuccessfulJob } from "./usageLimits.js";
 import { saveContactMessage } from "./db.js";
 import { buildStatusSnapshot } from "./statusMonitor.js";
+import { billingConfigHandler, createCheckoutHandler, createCardCheckoutHandler, billingWebhookHandler, getOrderHandler, submitOrderHandler, adminFulfillHandler } from "./billing.js";
 
 const SUPPORT_EMAIL = process.env.CONTACT_EMAIL || "support@pdfgerage.app";
 
@@ -79,9 +80,19 @@ app.use(
   })
 );
 app.use(cookieParser());
+
+app.post("/api/billing/webhook", express.raw({ type: "application/json" }), billingWebhookHandler);
+
 app.use(express.json({ limit: "2mb" }));
 
 mountAuthRoutes(app);
+
+app.get("/api/billing/config", billingConfigHandler);
+app.post("/api/billing/checkout", requireAuth, createCheckoutHandler);
+app.get("/api/billing/order/:orderId", requireAuth, getOrderHandler);
+app.post("/api/billing/order/:orderId/card", requireAuth, createCardCheckoutHandler);
+app.post("/api/billing/order/:orderId/submitted", requireAuth, submitOrderHandler);
+app.post("/api/billing/admin/fulfill", adminFulfillHandler);
 
 const distPath = path.join(__dirname, "..", "dist");
 

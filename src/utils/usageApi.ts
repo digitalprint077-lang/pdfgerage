@@ -6,6 +6,7 @@ export interface UsageSnapshot {
   used: number;
   remaining: number;
   maxFileSizeMb: number;
+  creditBalance?: number;
 }
 
 export async function fetchUsage(): Promise<UsageSnapshot> {

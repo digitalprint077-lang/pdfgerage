@@ -12,7 +12,7 @@ import ContactPage from "./pages/ContactPage";
 import PricingPage from "./pages/PricingPage";
 import ProfilePage from "./pages/ProfilePage";
 import LoginPage from "./pages/LoginPage";
-import SignupPage from "./pages/SignupPage";
+import CheckoutPage from "./pages/CheckoutPage";
 import "./index.css";
 
 createRoot(document.getElementById("root")!).render(
@@ -29,6 +29,7 @@ createRoot(document.getElementById("root")!).render(
             <Route path="/blog" element={<StaticPage pageId="blog" />} />
             <Route path="/status" element={<StatusPage />} />
             <Route path="/pricing" element={<PricingPage />} />
+            <Route path="/checkout/:orderId" element={<CheckoutPage />} />
             <Route path="/privacy" element={<StaticPage pageId="privacy" />} />
             <Route path="/terms" element={<StaticPage pageId="terms" />} />
             <Route path="/contact" element={<ContactPage />} />

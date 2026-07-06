@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import SitePageShell from "../components/SitePageShell";
 import { useAuth } from "../contexts/AuthContext";
 import { useI18n } from "../i18n/I18nContext";
@@ -18,6 +18,7 @@ import {
   type PlanColumn,
   type PlanId,
 } from "../data/pricing";
+import { startCheckout } from "../utils/billingApi";
 
 function RedCheck() {
   return (
@@ -122,9 +123,18 @@ function CellContent({
   return <span className="text-sm">{value}</span>;
 }
 
-function PlanButton({ plan, user }: { plan: PlanColumn; user: boolean }) {
-  const href = user && plan.id === "free" ? "/profile" : plan.ctaHref;
-  const label = user && plan.id === "free" ? "Current plan" : plan.cta;
+function PlanButton({
+  plan,
+  user,
+  credits,
+}: {
+  plan: PlanColumn;
+  user: boolean;
+  credits: number;
+}) {
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const className =
     plan.ctaVariant === "primary"
@@ -133,13 +143,53 @@ function PlanButton({ plan, user }: { plan: PlanColumn; user: boolean }) {
         ? "btn-secondary w-full rounded-xl py-2.5"
         : "btn-secondary w-full rounded-xl border-brand/30 py-2.5 text-brand hover:bg-brand/5";
 
+  if (plan.id === "free") {
+    const href = user ? "/profile" : plan.ctaHref;
+    const label = user ? "Current plan" : plan.cta;
+    return (
+      <Link to={href} className={`block text-center text-sm font-semibold transition ${className}`}>
+        {label}
+      </Link>
+    );
+  }
+
+  if (plan.id === "enterprise") {
+    return (
+      <Link to={plan.ctaHref} className={`block text-center text-sm font-semibold transition ${className}`}>
+        {plan.cta}
+      </Link>
+    );
+  }
+
+  const handlePaidPlan = async () => {
+    setError(null);
+    if (!user) {
+      navigate(`/signup?returnTo=${encodeURIComponent("/pricing")}`);
+      return;
+    }
+    setLoading(true);
+    try {
+      const planType = plan.id === "subscription" ? "subscription" : "package";
+      const checkoutCredits = plan.id === "subscription" ? Math.max(1000, credits) : credits;
+      await startCheckout(planType, checkoutCredits);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Checkout failed");
+      setLoading(false);
+    }
+  };
+
   return (
-    <Link
-      to={href}
-      className={`block text-center text-sm font-semibold transition ${className}`}
-    >
-      {label}
-    </Link>
+    <div>
+      <button
+        type="button"
+        disabled={loading}
+        onClick={handlePaidPlan}
+        className={`block w-full text-center text-sm font-semibold transition disabled:opacity-60 ${className}`}
+      >
+        {loading ? "Starting checkout…" : user ? plan.cta : "Sign up to buy"}
+      </button>
+      {error ? <p className="mt-2 text-xs text-red-400">{error}</p> : null}
+    </div>
   );
 }
 
@@ -312,7 +362,7 @@ export default function PricingPage() {
                     ) : null}
                   </p>
                   <div className="mt-5">
-                    <PlanButton plan={plan} user={!!user} />
+                    <PlanButton plan={plan} user={!!user} credits={credits} />
                   </div>
                 </div>
               ))}
