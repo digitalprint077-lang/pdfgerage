@@ -392,8 +392,6 @@ export default function UploadZone({
           usageBlocked={showLimitBanner}
           usageBlockVariant={blockVariant}
           usageLimit={limit}
-          fileJobCount={fileJobCount}
-          usageRemaining={usage?.remaining}
         />
         {conversionResult ? (
           <ConversionPreviewModal
@@ -571,14 +569,6 @@ export default function UploadZone({
           )}
             </>
           )}
-
-          {!isBlocked && usage && usage.remaining > 0 && usage.plan === "free" ? (
-            <p className="text-xs text-[rgb(var(--muted))]">
-              {t("freeUsageRemaining")
-                .replace("{remaining}", String(usage.remaining))
-                .replace("{limit}", String(usage.limit))}
-            </p>
-          ) : null}
         </div>
       </div>
     </section>

@@ -4,6 +4,13 @@ import crypto from "crypto";
 import { createUser, findUserByEmail, findUserById, findOrCreateGoogleUser, updateUserName, updateUserPassword } from "./db.js";
 import { getUserDashboard } from "./userActivity.js";
 import { sessionCookieOptions } from "./cookieOptions.js";
+import {
+  activityExportHandler,
+  deleteAccountHandler,
+  invoicesHandler,
+  settingsGetHandler,
+  settingsUpdateHandler,
+} from "./accountApi.js";
 
 const JWT_SECRET = process.env.JWT_SECRET || "dev-change-me-in-production";
 const COOKIE_NAME = "auth_token";
@@ -148,7 +155,12 @@ export async function changePasswordHandler(req, res) {
 
 export function dashboardHandler(req, res) {
   try {
-    const dashboard = getUserDashboard(req.userRow.id, req.userRow.email, req.userRow);
+    const range = String(req.query.range || "24h");
+    const granularity = String(req.query.granularity || "hourly");
+    const dashboard = getUserDashboard(req.userRow.id, req.userRow.email, req.userRow, {
+      range,
+      granularity,
+    });
     res.json(dashboard);
   } catch (err) {
     console.error("dashboard error:", err);
@@ -434,4 +446,9 @@ export function mountAuthRoutes(app) {
   app.get("/api/auth/dashboard", requireAuth, dashboardHandler);
   app.patch("/api/auth/profile", requireAuth, profileUpdateHandler);
   app.post("/api/auth/change-password", requireAuth, changePasswordHandler);
+  app.get("/api/auth/settings", requireAuth, settingsGetHandler);
+  app.patch("/api/auth/settings", requireAuth, settingsUpdateHandler);
+  app.get("/api/auth/invoices", requireAuth, invoicesHandler);
+  app.get("/api/auth/activity/export", requireAuth, activityExportHandler);
+  app.delete("/api/auth/account", requireAuth, deleteAccountHandler);
 }

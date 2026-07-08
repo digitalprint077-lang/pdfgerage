@@ -5,32 +5,21 @@ import RequireAuth from "../components/RequireAuth";
 import { useAuth } from "../contexts/AuthContext";
 import { useI18n } from "../i18n/I18nContext";
 import {
+  activityExportUrl,
   changePassword,
   fetchDashboard,
   type DashboardActivity,
   type DashboardData,
 } from "../utils/dashboardApi";
 
-type Tab = "overview" | "activity" | "security" | "plan";
+import DashboardShell, { type DashboardSection } from "../components/dashboard/DashboardShell";
+import DashboardHome, { type ChartGranularity, type ChartRange } from "../components/dashboard/DashboardHome";
+import AccountNotifications from "../components/dashboard/AccountNotifications";
+import AccountInvoices from "../components/dashboard/AccountInvoices";
+import AccountDelete from "../components/dashboard/AccountDelete";
 
-function initials(name: string, email: string) {
-  const source = name.trim() || email.split("@")[0] || "?";
-  const parts = source.split(/\s+/).filter(Boolean);
-  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
-  return source.slice(0, 2).toUpperCase();
-}
+type Tab = DashboardSection;
 
-function formatDate(iso: string) {
-  try {
-    return new Intl.DateTimeFormat(undefined, {
-      month: "long",
-      day: "numeric",
-      year: "numeric",
-    }).format(new Date(iso));
-  } catch {
-    return iso;
-  }
-}
 
 function formatDateTime(iso: string) {
   try {
@@ -60,13 +49,16 @@ function operationLabel(op: string) {
 
 const inputClass = "input-modern";
 
-function StatCard({ label, value, accent }: { label: string; value: number | string; accent?: string }) {
-  return (
-    <div className="modern-card p-5">
-      <p className="text-xs font-medium uppercase tracking-wide text-[rgb(var(--muted))]">{label}</p>
-      <p className={`mt-2 text-3xl font-bold tabular-nums ${accent || ""}`}>{value}</p>
-    </div>
-  );
+function formatDate(iso: string) {
+  try {
+    return new Intl.DateTimeFormat(undefined, {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    }).format(new Date(iso));
+  } catch {
+    return iso;
+  }
 }
 
 function UsageBar({ used, limit }: { used: number; limit: number }) {
@@ -89,10 +81,18 @@ function UsageBar({ used, limit }: { used: number; limit: number }) {
   );
 }
 
-function ActivityTable({ rows, t }: { rows: DashboardActivity[]; t: (k: import("../i18n/translations").TranslationKey) => string }) {
+function ActivityTable({
+  rows,
+  t,
+  onExport,
+}: {
+  rows: DashboardActivity[];
+  t: (k: import("../i18n/translations").TranslationKey) => string;
+  onExport: () => void;
+}) {
   if (!rows.length) {
     return (
-      <div className="modern-card border-dashed py-12 text-center">
+      <div className="cc-dash-card border-dashed py-12 text-center">
         <p className="font-medium text-[rgb(var(--muted))]">{t("dashNoActivity")}</p>
         <p className="mt-2 text-sm text-[rgb(var(--muted))]">{t("dashNoActivityHint")}</p>
         <Link to="/" className="mt-4 inline-block text-sm text-brand hover:underline">
@@ -103,7 +103,14 @@ function ActivityTable({ rows, t }: { rows: DashboardActivity[]; t: (k: import("
   }
 
   return (
-    <div className="modern-card overflow-x-auto">
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-[rgb(var(--muted))]">{rows.length} entries</p>
+        <button type="button" onClick={onExport} className="btn-secondary py-2 text-sm">
+          Export CSV
+        </button>
+      </div>
+      <div className="cc-dash-card overflow-x-auto">
       <table className="w-full min-w-[640px] text-left text-sm">
         <thead className="border-b border-[rgb(var(--border))] bg-[rgb(var(--card-hover)/0.5)] text-xs uppercase tracking-wide text-[rgb(var(--muted))]">
           <tr>
@@ -128,14 +135,21 @@ function ActivityTable({ rows, t }: { rows: DashboardActivity[]; t: (k: import("
               </td>
               <td className="px-4 py-3 text-[rgb(var(--muted))]">{formatDateTime(row.createdAt)}</td>
               <td className="px-4 py-3">
-                <span className="inline-flex rounded-md bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-400">
-                  {t("dashSuccess")}
-                </span>
+                {row.status === "success" ? (
+                  <span className="inline-flex rounded-md bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-400">
+                    {t("dashSuccess")}
+                  </span>
+                ) : (
+                  <span className="inline-flex rounded-md bg-red-500/10 px-2 py-0.5 text-xs font-medium text-red-400">
+                    Failed
+                  </span>
+                )}
               </td>
             </tr>
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }
@@ -145,7 +159,9 @@ function ProfileDashboard() {
   const { user, logout, updateProfile } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [tab, setTab] = useState<Tab>("overview");
+  const [tab, setTab] = useState<Tab>("dashboard");
+  const [chartRange, setChartRange] = useState<ChartRange>("24h");
+  const [chartGranularity, setChartGranularity] = useState<ChartGranularity>("hourly");
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
   const [dashLoading, setDashLoading] = useState(true);
   const [dashError, setDashError] = useState<string | null>(null);
@@ -175,8 +191,19 @@ function ProfileDashboard() {
 
   useEffect(() => {
     const urlTab = searchParams.get("tab");
-    if (urlTab === "plan" || urlTab === "overview" || urlTab === "activity" || urlTab === "security") {
-      setTab(urlTab);
+    const mapped =
+      urlTab === "overview" ? "dashboard" : urlTab;
+    if (
+      mapped === "dashboard" ||
+      mapped === "profile" ||
+      mapped === "plan" ||
+      mapped === "activity" ||
+      mapped === "security" ||
+      mapped === "notifications" ||
+      mapped === "invoices" ||
+      mapped === "delete"
+    ) {
+      setTab(mapped);
     }
     if (searchParams.get("purchase") === "success") {
       setTab("plan");
@@ -191,10 +218,13 @@ function ProfileDashboard() {
     }
   }, [searchParams, setSearchParams]);
 
+  const loadDashboard = (range = chartRange, granularity = chartGranularity) =>
+    fetchDashboard({ range, granularity });
+
   useEffect(() => {
     let cancelled = false;
     setDashLoading(true);
-    fetchDashboard()
+    loadDashboard()
       .then((data) => {
         if (!cancelled) {
           setDashboard(data);
@@ -210,17 +240,42 @@ function ProfileDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [user?.id]);
+  }, [user?.id, chartRange, chartGranularity]);
 
   if (!user) return null;
 
   const displayName = user.name || user.email.split("@")[0];
-  const tabs: { id: Tab; label: string }[] = [
-    { id: "overview", label: t("dashOverview") },
-    { id: "activity", label: t("dashActivity") },
-    { id: "security", label: t("dashSecurity") },
-    { id: "plan", label: t("dashPlan") },
-  ];
+
+  const sectionTitle: Record<Tab, string> = {
+    dashboard: "Dashboard",
+    profile: "Profile",
+    activity: "Activity Logs",
+    security: "Security",
+    notifications: "Notifications",
+    delete: "Delete Account",
+    plan: "Plan",
+    invoices: "Invoices",
+  };
+
+  const exportActivity = () => {
+    window.open(activityExportUrl(), "_blank", "noopener,noreferrer");
+  };
+
+  const handleSectionChange = (section: Tab) => {
+    setTab(section);
+    setSearchParams(section === "dashboard" ? {} : { tab: section }, { replace: true });
+  };
+
+  const refreshDashboard = () => {
+    setDashLoading(true);
+    loadDashboard()
+      .then((data) => {
+        setDashboard(data);
+        setDashError(null);
+      })
+      .catch((err) => setDashError(err instanceof Error ? err.message : "Failed to load"))
+      .finally(() => setDashLoading(false));
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -263,59 +318,21 @@ function ProfileDashboard() {
   };
 
   return (
-    <SitePageShell>
-      <div className="mx-auto max-w-6xl px-4 py-10 md:py-14">
-        <Link
-          to="/"
-          className="mb-8 inline-flex items-center gap-1 text-sm text-[rgb(var(--muted))] transition hover:text-brand"
-        >
-          ← {t("backToHome")}
-        </Link>
-
-        {/* Header */}
-        <header className="mb-8 flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-          <div className="flex items-center gap-4">
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-brand/20 text-xl font-bold text-brand">
-              {initials(user.name, user.email)}
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
-                {t("profileWelcome")} {displayName}
-              </h1>
-              <p className="mt-1 text-sm text-[rgb(var(--muted))]">{user.email}</p>
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-400">
-                  {t("dashActive")}
-                </span>
-                <span className="inline-flex items-center rounded-md border border-[rgb(var(--border))] bg-[rgb(var(--card-hover))] px-2 py-0.5 text-xs text-[rgb(var(--muted))]">
-                  {t("dashFreePlan")} {t("dashCurrentPlan").toLowerCase()}
-                </span>
-                {dashboard?.lastActivityAt ? (
-                  <span className="text-xs text-[rgb(var(--muted))]">
-                    {t("dashLastActive")}: {formatDateTime(dashboard.lastActivityAt)}
-                  </span>
-                ) : null}
-              </div>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <Link
-              to="/"
-              className="btn-primary"
-            >
-              {t("profileStartConverting")}
-            </Link>
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="btn-secondary"
-            >
+    <SitePageShell bare>
+      <DashboardShell
+        section={tab}
+        onSectionChange={handleSectionChange}
+        title={sectionTitle[tab]}
+        topRight={
+          <div className="flex items-center gap-2">
+            <span className="hidden text-sm text-[rgb(var(--muted))] sm:inline">{user.email}</span>
+            <button type="button" onClick={handleLogout} className="btn-secondary py-2 text-sm">
               {t("logout")}
             </button>
           </div>
-        </header>
-
-        {dashLoading ? (
+        }
+      >
+        {dashLoading && !dashboard ? (
           <p className="py-16 text-center text-[rgb(var(--muted))]">{t("dashLoading")}</p>
         ) : (
           <>
@@ -324,146 +341,111 @@ function ProfileDashboard() {
                 {dashError}. Restart the dev server if you just updated the app.
               </p>
             ) : null}
+
             {dashboard ? (
-          <div className="flex flex-col gap-8 lg:flex-row">
-            {/* Sidebar tabs */}
-            <nav className="flex shrink-0 gap-1 overflow-x-auto lg:w-48 lg:flex-col lg:gap-0.5">
-              {tabs.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => setTab(item.id)}
-                  className={`whitespace-nowrap rounded-lg px-4 py-2.5 text-left text-sm font-medium transition lg:w-full ${
-                    tab === item.id
-                      ? "bg-brand/15 text-brand"
-                      : "text-[rgb(var(--muted))] hover:bg-[rgb(var(--card-hover))] hover:text-[rgb(var(--foreground))]"
-                  }`}
-                >
-                  {item.label}
-                </button>
-              ))}
-            </nav>
+              <>
+                {tab === "dashboard" && (
+                  <DashboardHome
+                    dashboard={dashboard}
+                    range={chartRange}
+                    granularity={chartGranularity}
+                    onRangeChange={setChartRange}
+                    onGranularityChange={setChartGranularity}
+                    onRefresh={refreshDashboard}
+                    refreshing={dashLoading}
+                    memberSince={formatDate(user.createdAt)}
+                    email={user.email}
+                    authProvider={dashboard.security.authProvider}
+                  />
+                )}
 
-            {/* Main panel */}
-            <div className="min-w-0 flex-1 space-y-6">
-              {tab === "overview" && (
-                <>
-                  <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                    <StatCard label={t("dashTotalConversions")} value={dashboard.stats.totalConversions} />
-                    <StatCard label={t("dashToday")} value={dashboard.stats.usedToday} accent="text-brand" />
-                    <StatCard label={t("dashOcrJobs")} value={dashboard.stats.ocrJobs} />
-                    <StatCard label={t("dashTranslateJobs")} value={dashboard.stats.translateJobs} />
-                  </div>
-
-                  <div className="grid gap-6 lg:grid-cols-2">
-                    <section className="modern-card p-6">
-                      <h2 className="mb-4 text-lg font-semibold">{t("dashUsageToday")}</h2>
-                      <UsageBar used={dashboard.plan.usedToday} limit={dashboard.plan.dailyLimit} />
-                      <p className="mt-3 text-sm text-[rgb(var(--muted))]">
-                        {dashboard.plan.remainingToday} {t("dashRemaining")}
+                {tab === "profile" && (
+                  <div className="mx-auto max-w-2xl space-y-6">
+                    <section className="cc-dash-card p-6">
+                      <h2 className="mb-1 text-lg font-semibold">{t("profileDetails")}</h2>
+                      <p className="mb-6 text-sm text-[rgb(var(--muted))]">
+                        {t("profileWelcome")} {displayName}
                       </p>
-                    </section>
-
-                    <section className="modern-card p-6">
-                      <h2 className="mb-4 text-lg font-semibold">{t("profileDetails")}</h2>
-                      <dl className="space-y-3 text-sm">
+                      <dl className="mb-6 space-y-3 border-b border-[rgb(var(--border))] pb-6 text-sm">
                         <div className="flex justify-between">
                           <dt className="text-[rgb(var(--muted))]">{t("memberSince")}</dt>
-                          <dd className="text-[rgb(var(--foreground))]">{formatDate(user.createdAt)}</dd>
+                          <dd>{formatDate(user.createdAt)}</dd>
                         </div>
                         <div className="flex justify-between">
                           <dt className="text-[rgb(var(--muted))]">{t("profileSignInMethod")}</dt>
-                          <dd className="text-[rgb(var(--foreground))]">
+                          <dd>
                             {user.authProvider === "google" ? t("profileGoogleAccount") : t("profileEmailAccount")}
                           </dd>
-                        </div>
-                        <div className="flex justify-between">
-                          <dt className="text-[rgb(var(--muted))]">{t("dashSupportTickets")}</dt>
-                          <dd className="text-[rgb(var(--foreground))]">{dashboard.supportMessages}</dd>
                         </div>
                         <div className="flex justify-between">
                           <dt className="text-[rgb(var(--muted))]">{t("profileUserId")}</dt>
                           <dd className="font-mono text-xs text-[rgb(var(--muted))]">#{user.id}</dd>
                         </div>
                       </dl>
+                      <form onSubmit={handleSave} className="space-y-4">
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          <div>
+                            <label htmlFor="profile-name" className="mb-1.5 block text-sm font-medium text-[rgb(var(--muted))]">
+                              {t("name")}
+                            </label>
+                            <input
+                              id="profile-name"
+                              type="text"
+                              value={name}
+                              onChange={(e) => setName(e.target.value)}
+                              maxLength={80}
+                              className={inputClass}
+                              placeholder={t("profileNamePlaceholder")}
+                            />
+                          </div>
+                          <div>
+                            <label htmlFor="profile-email" className="mb-1.5 block text-sm font-medium text-[rgb(var(--muted))]">
+                              {t("email")}
+                            </label>
+                            <input
+                              id="profile-email"
+                              type="email"
+                              value={user.email}
+                              readOnly
+                              className={`${inputClass} cursor-not-allowed opacity-70`}
+                            />
+                          </div>
+                        </div>
+                        {saveError ? (
+                          <p className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-400">{saveError}</p>
+                        ) : null}
+                        {saveMessage ? (
+                          <p className="rounded-lg bg-emerald-500/10 px-3 py-2 text-sm text-emerald-400">{saveMessage}</p>
+                        ) : null}
+                        <button
+                          type="submit"
+                          disabled={saving}
+                          className="btn-primary disabled:opacity-50"
+                        >
+                          {saving ? t("working") : t("profileSaveChanges")}
+                        </button>
+                      </form>
                     </section>
                   </div>
+                )}
 
-                  <section className="modern-card p-6">
-                    <h2 className="mb-4 text-lg font-semibold">{t("profileAccount")}</h2>
-                    <form onSubmit={handleSave} className="space-y-4">
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        <div>
-                          <label htmlFor="profile-name" className="mb-1.5 block text-sm font-medium text-[rgb(var(--muted))]">
-                            {t("name")}
-                          </label>
-                          <input
-                            id="profile-name"
-                            type="text"
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            maxLength={80}
-                            className={inputClass}
-                            placeholder={t("profileNamePlaceholder")}
-                          />
-                        </div>
-                        <div>
-                          <label htmlFor="profile-email" className="mb-1.5 block text-sm font-medium text-[rgb(var(--muted))]">
-                            {t("email")}
-                          </label>
-                          <input
-                            id="profile-email"
-                            type="email"
-                            value={user.email}
-                            readOnly
-                            className={`${inputClass} cursor-not-allowed opacity-70`}
-                          />
-                        </div>
-                      </div>
-                      {saveError ? (
-                        <p className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-400">{saveError}</p>
-                      ) : null}
-                      {saveMessage ? (
-                        <p className="rounded-lg bg-emerald-500/10 px-3 py-2 text-sm text-emerald-400">{saveMessage}</p>
-                      ) : null}
-                      <button
-                        type="submit"
-                        disabled={saving}
-                        className="rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-hover disabled:opacity-50"
-                      >
-                        {saving ? t("working") : t("profileSaveChanges")}
-                      </button>
-                    </form>
-                  </section>
-
+                {tab === "activity" && (
                   <section>
-                    <div className="mb-4 flex items-center justify-between">
-                      <h2 className="text-lg font-semibold">{t("dashRecentActivity")}</h2>
-                      {dashboard.recentActivity.length > 0 ? (
-                        <button
-                          type="button"
-                          onClick={() => setTab("activity")}
-                          className="text-sm text-brand hover:underline"
-                        >
-                          View all →
-                        </button>
-                      ) : null}
-                    </div>
-                    <ActivityTable rows={dashboard.recentActivity.slice(0, 5)} t={t} />
+                    <ActivityTable rows={dashboard.recentActivity} t={t} onExport={exportActivity} />
                   </section>
-                </>
-              )}
+                )}
 
-              {tab === "activity" && (
-                <section>
-                  <h2 className="mb-4 text-lg font-semibold">{t("dashActivity")}</h2>
-                  <ActivityTable rows={dashboard.recentActivity} t={t} />
-                </section>
-              )}
+                {tab === "notifications" && <AccountNotifications initial={dashboard.settings} />}
 
-              {tab === "security" && (
+                {tab === "invoices" && <AccountInvoices />}
+
+                {tab === "delete" && (
+                  <AccountDelete email={user.email} hasPassword={dashboard.security.hasPassword} />
+                )}
+
+                {tab === "security" && (
                 <div className="space-y-6">
-                  <section className="modern-card p-6">
+                  <section className="cc-dash-card p-6">
                     <h2 className="mb-4 text-lg font-semibold">{t("dashAccountStatus")}</h2>
                     <ul className="space-y-3 text-sm">
                       <li className="flex items-center justify-between rounded-lg border border-[rgb(var(--border))] px-4 py-3">
@@ -492,7 +474,7 @@ function ProfileDashboard() {
                   </section>
 
                   {dashboard.security.hasPassword ? (
-                    <section className="modern-card p-6">
+                    <section className="cc-dash-card p-6">
                       <h2 className="mb-4 text-lg font-semibold">{t("dashChangePassword")}</h2>
                       <form onSubmit={handlePasswordChange} className="max-w-md space-y-4">
                         <div>
@@ -544,7 +526,7 @@ function ProfileDashboard() {
                     </section>
                   ) : null}
 
-                  <section className="modern-card p-6">
+                  <section className="cc-dash-card p-6">
                     <h2 className="mb-2 text-lg font-semibold">{t("profilePrivacyNote")}</h2>
                     <p className="mb-4 text-sm leading-relaxed text-[rgb(var(--muted))]">{t("profilePrivacyDesc")}</p>
                     <Link to="/security" className="text-sm text-brand hover:underline">
@@ -582,7 +564,7 @@ function ProfileDashboard() {
                   </section>
 
                   <div className="grid gap-6 lg:grid-cols-2">
-                    <section className="modern-card p-6">
+                    <section className="cc-dash-card p-6">
                       <h3 className="mb-4 font-semibold">
                         {dashboard.plan.creditBalance && dashboard.plan.creditBalance > 0
                           ? "Credit balance"
@@ -621,7 +603,7 @@ function ProfileDashboard() {
                       </ul>
                     </section>
 
-                    <section className="modern-card p-6">
+                    <section className="cc-dash-card p-6">
                       <h3 className="mb-4 font-semibold">{t("dashBreakdown")}</h3>
                       {dashboard.operationBreakdown.length ? (
                         <ul className="space-y-3">
@@ -638,7 +620,7 @@ function ProfileDashboard() {
                     </section>
                   </div>
 
-                  <section className="modern-card p-6">
+                  <section className="cc-dash-card p-6">
                     <h3 className="mb-3 font-semibold">{t("profileQuickActions")}</h3>
                     <div className="grid gap-2 sm:grid-cols-3">
                       <Link
@@ -663,10 +645,9 @@ function ProfileDashboard() {
                   </section>
                 </div>
               )}
-            </div>
-          </div>
+              </>
             ) : !dashLoading ? (
-              <section className="modern-card p-6">
+              <section className="cc-dash-card p-6">
                 <h2 className="mb-4 text-lg font-semibold">{t("profileAccount")}</h2>
                 <p className="mb-4 text-sm text-[rgb(var(--muted))]">
                   Dashboard stats are unavailable. Your account is still active — edit your profile below.
@@ -705,11 +686,7 @@ function ProfileDashboard() {
                   {saveMessage ? (
                     <p className="rounded-lg bg-emerald-500/10 px-3 py-2 text-sm text-emerald-400">{saveMessage}</p>
                   ) : null}
-                  <button
-                    type="submit"
-                    disabled={saving}
-                    className="rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-hover disabled:opacity-50"
-                  >
+                  <button type="submit" disabled={saving} className="btn-primary disabled:opacity-50">
                     {saving ? t("working") : t("profileSaveChanges")}
                   </button>
                 </form>
@@ -717,7 +694,7 @@ function ProfileDashboard() {
             ) : null}
           </>
         )}
-      </div>
+      </DashboardShell>
     </SitePageShell>
   );
 }

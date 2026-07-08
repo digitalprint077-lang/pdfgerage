@@ -140,3 +140,23 @@ export function getPurchaseByExternalId(externalId, userId = null) {
   if (userId != null && row.user_id !== userId) return null;
   return row;
 }
+
+export function getUserPurchases(userId, limit = 50) {
+  return db
+    .prepare(
+      `SELECT external_id, plan_type, credits, amount_cents, currency, provider, status, created_at
+       FROM credit_purchases WHERE user_id = ?
+       ORDER BY datetime(created_at) DESC LIMIT ?`
+    )
+    .all(userId, limit)
+    .map((row) => ({
+      orderId: row.external_id,
+      planType: row.plan_type,
+      credits: row.credits,
+      amountUsd: row.amount_cents / 100,
+      currency: row.currency,
+      provider: row.provider,
+      status: row.status,
+      createdAt: row.created_at,
+    }));
+}
